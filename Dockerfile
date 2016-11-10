@@ -1,7 +1,7 @@
 FROM alpine:latest
 MAINTAINER Thomas Spicer <thomas@openbridge.com>
 
-ENV CLOUDSDK_VERSION=133.0.0
+ENV CLOUDSDK_VERSION=134.0.0
 ENV CLOUDSDK_PYTHON_SITEPACKAGES=1
 ENV PATH /google-cloud-sdk/bin:$PATH
 ENV HOME /
@@ -45,6 +45,8 @@ RUN set -x \
     && google-cloud-sdk/bin/gcloud config set --installation component_manager/disable_update_check true \
     && sed -i -- 's/\"disable_updater\": false/\"disable_updater\": true/g' /google-cloud-sdk/lib/googlecloudsdk/core/config.json \
     && chmod +x /query.sh /export.sh /docker-entrypoint.sh \
+    && wget --no-check-certificate --directory-prefix=/usr/bin https://raw.githubusercontent.com/openbridge/ob_hipchat/master/hipchat \
+    && chmod +x /usr/bin/hipchat \
     && apk del .build-deps
 
 ENTRYPOINT ["/docker-entrypoint.sh"]

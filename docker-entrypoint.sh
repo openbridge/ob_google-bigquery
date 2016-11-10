@@ -26,4 +26,6 @@ if test -n "${LOG_FILE}"; then log_command=" 2>&1 | tee -a "${LOG_FILE};fi
 
 if test "${1}" = 'cron'; then echo "OK: The command ${1} has been set. Starting the container with ${1} running now..." && runcrond="crond -f" && bash -c "${runcrond}"; else echo "INFO: Running the command ${1} ..."; fi
 
+ hipchat -i "OK: Started GA360 container for ${CLOUDSDK_CORE_PROJECT}" -l "OK"
+
 exec "$@"

@@ -46,9 +46,12 @@ while [[ ${CUR} -le ${END} ]]; do
 
   if test "${GASESSIONSCHECK}" = "0"; then
      echo "OK: ga_sessions_${FDATE} table exists. Run export process..."
+     hipchat -i "OK: ${CLOUDSDK_CORE_PROJECT}:${BIGQUERY_GA_DATASET}.ga_sessions_${FDATE} table exists. Run export process..." -l "OK"
      bq query --batch --allow_large_results --destination_table="${BIGQUERY_WD_DATASET}"."${FILEDATE}"_"${BIGQUERY_SQL}" "${BQQUERY}"
+     hipchat -i "OK: Completed creating the ${CLOUDSDK_CORE_PROJECT}:${BIGQUERY_GA_DATASET}.ga_sessions_${FDATE} table"
+
    else
-     echo "ERROR: The ga_sessions_${FDATE} data is not present yet. Cant start export process" && exit 1
+     echo "ERROR: The ga_sessions_${FDATE} data is not present yet. Cant start export process" && hipchat -i "ERROR: The ga_sessions_${FDATE} data is not present yet. Cant start export process" -l "warning" && exit 1
   fi
 
   # Check if the process created the daily export table in the working job dataset
@@ -57,17 +60,24 @@ while [[ ${CUR} -le ${END} ]]; do
   # We will perform a spot check to make sure that the job table in the working dataset does in fact have data present. If it does, run the export process
   if test "${BQTABLECHECK}" = "0"; then
     echo "OK: ${FILEDATE}_${BIGQUERY_SQL} table exists. Checking record counts..."
-    while read -r num; do echo "${num}" && if [[ $num =~ \"num\":\"([[:digit:]]+)\" ]] && (( BASH_REMATCH[1] > 1000 )); then echo "Ok: ${FILEDATE}_${BIGQUERY_SQL} table counts meet expectations. Ready to extract data..."
+    while read -r num; do echo "${num}" && if [[ $num =~ \"num\":\"([[:digit:]]+)\" ]] && (( BASH_REMATCH[1] > 1000 )); then echo "Ok: ${FILEDATE}_${BIGQUERY_SQL} table count test meet expectations. Ready to creat extracts..."
+
     bq extract --compression=GZIP ${CLOUDSDK_CORE_PROJECT}:${BIGQUERY_WD_DATASET}.${FILEDATE}_${BIGQUERY_SQL} gs://${GSBUCKET}/${GSPATH}/${BIGQUERY_SQL}/${FILEDATE}_${BIGQUERY_SQL}_export*.gz; fi done < <(echo "SELECT COUNT(*) as num FROM [${CLOUDSDK_CORE_PROJECT}:${BIGQUERY_WD_DATASET}.${FILEDATE}_${BIGQUERY_SQL}] HAVING COUNT(*) > 100000" | bq query --format json)
+
+    hipchat -i "OK: The GZIP file extracts for ${CLOUDSDK_CORE_PROJECT}:${BIGQUERY_WD_DATASET}.${FILEDATE}_${BIGQUERY_SQL} have completed" -l "OK"
+
   else
-    echo "ERROR: The ${FILEDATE}_${BIGQUERY_SQL} table counts are too low. Exiting" && exit 1
+    echo "ERROR: The ${FILEDATE}_${BIGQUERY_SQL} table counts are too low. Exiting" && hipchat -i "ERROR: The ${FILEDATE}_${BIGQUERY_SQL} table counts are too low. Exiting" -l "CRITICAL" && exit 1
   fi
 
   # Transfer to S3
   if [[ "${MODE}" = "PROD" && -n ${S3BUCKET} ]]; then
-    echo "Ok: Push extracts to S3..."
+
+    hipchat -i "OK: Beginging transfer of files from gs://${GSBUCKET}/${GSPATH}/${BIGQUERY_SQL}/ to s3://${S3BUCKET}/ ..." -l "OK"
     gsutil -m rsync -d -r -x "TESTING_" gs://"${GSBUCKET}"/"${GSPATH}"/"${BIGQUERY_SQL}"/ s3://"${S3BUCKET}"/
     echo "Ok: Completed S3 transfer"
+    hipchat -i "OK: The transfer from gs://${GSBUCKET}/${GSPATH}/${BIGQUERY_SQL}/ to s3://${S3BUCKET}/ completed" -l "OK"
+    ERROR: The ${FILEDATE}_${BIGQUERY_SQL} table counts are too low. Exiting
   else
     echo "Ok: Running in TEST mode"
   fi
@@ -78,11 +88,14 @@ while [[ ${CUR} -le ${END} ]]; do
      for i in $(bq ls -n 9999 "${CLOUDSDK_CORE_PROJECT}" | grep "TESTING_*" | awk '{print $1}'); do bq rm -ft "${CLOUDSDK_CORE_PROJECT}"."${i}"; done
      # Transfer to archive dataset
      bq cp "${CLOUDSDK_CORE_PROJECT}":"${BIGQUERY_WD_DATASET}"."${FILEDATE}"_"${BIGQUERY_SQL}" "${CLOUDSDK_CORE_PROJECT}":"${BIGQUERY_ARCHIVE_DATASET}"."${FILEDATE}"_"${BIGQUERY_SQL}"_ARCHIVE
+
   fi
 
 done
 
 # Everything worked. Cleanup and reset the process
 if [[ -f "/tmp/runjob.txt" ]]; then echo "OK: Job is complete" && rm -f /tmp/runjob.txt; fi
+
+hipchat -i "OK: The processing for ${CLOUDSDK_CORE_PROJECT}:${BIGQUERY_GA_DATASET} on ${FDATE} has completed successfully" -l "OK"
 
 exit 0

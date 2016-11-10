@@ -1,5 +1,5 @@
 google-cloud-sdk:
-  image: google-cloud
+  image: gcloud
   volumes:
     - ./cron/crontab.conf:/crontab.conf
     - ./auth/prod.json:/auth.json
