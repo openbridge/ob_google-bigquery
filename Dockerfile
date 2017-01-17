@@ -1,7 +1,7 @@
-FROM alpine:latest
+FROM alpine:3.5
 MAINTAINER Thomas Spicer <thomas@openbridge.com>
 
-ENV CLOUDSDK_VERSION=134.0.0
+ENV CLOUDSDK_VERSION=139.0.1
 ENV CLOUDSDK_PYTHON_SITEPACKAGES=1
 ENV PATH /google-cloud-sdk/bin:$PATH
 ENV HOME /
@@ -11,28 +11,23 @@ ENV BUILD_DEPS \
         linux-headers \
         wget \
         build-base \
-        openssl-dev \
-        python-dev \
+        libressl-dev \
+        python2-dev \
         libffi-dev \
         unzip \
         ca-certificates \
-        py-pip \
+        py2-pip \
         gnupg \
-        musl
-
-COPY query.sh /query.sh
-COPY lifecycle.json /lifecycle.json
-COPY sql/ga360master.sql /ga360master.sql
-COPY export.sh /export.sh
-COPY docker-entrypoint.sh /docker-entrypoint.sh
+        musl-dev
 
 RUN set -x \
     && apk add --no-cache --virtual .persistent-deps \
         rsync \
         bash \
+        curl \
         coreutils \
-        python \
         openssh-client \
+        python2 \
     && apk add --no-cache --virtual .build-deps \
         $BUILD_DEPS \
     && pip install --upgrade pip crcmod setuptools pyopenssl awscli cryptography \
@@ -44,10 +39,20 @@ RUN set -x \
     && rm -rf /tmp/* \
     && google-cloud-sdk/bin/gcloud config set --installation component_manager/disable_update_check true \
     && sed -i -- 's/\"disable_updater\": false/\"disable_updater\": true/g' /google-cloud-sdk/lib/googlecloudsdk/core/config.json \
-    && chmod +x /query.sh /export.sh /docker-entrypoint.sh \
     && wget --no-check-certificate --directory-prefix=/usr/bin https://raw.githubusercontent.com/openbridge/ob_hipchat/master/hipchat \
-    && chmod +x /usr/bin/hipchat \
+    && rm -f google-cloud-sdk-${CLOUDSDK_VERSION}-linux-x86_64.tar.gz \
+    && mkdir /.ssh \
+    && rm -rf /var/cache/apk/*\
     && apk del .build-deps
+
+COPY usr/bin/ /usr/bin/
+COPY lifecycle.json /lifecycle.json
+COPY sql/ /sql/
+COPY docker-entrypoint.sh /docker-entrypoint.sh
+
+RUN chmod +x /usr/bin/bigquery-run /usr/bin/bigquery-export /docker-entrypoint.sh /usr/bin/hipchat
+
+VOLUME ["/.config"]
 
 ENTRYPOINT ["/docker-entrypoint.sh"]
 CMD [""]

@@ -1,0 +1,52 @@
+#!/usr/bin/env bash
+
+set -e
+
+exec 200< $0
+
+if ! flock -n 200; then echo "OK: There can be only one query process happening at once. Exit" && exit 1; fi
+
+args=("$@")
+
+function mode() {
+
+  if [[ ${args[0]} = "prod" ]]; then MODE=prod && export MODE=${1}; else export MODE="test"; fi
+  if [[ -z ${args[1]} ]]; then START=$(date -d "1 day ago" "+%Y-%m-%d"); else START="${args[1]}" && echo "OK: START date passed... "; fi
+  if [[ -z ${args[2]} ]]; then END=$(date -d "1 day ago" "+%Y-%m-%d"); else END="${args[2]}" && echo "OK: END date passed... "; fi
+
+}
+
+function account_auth() {
+
+  if test -n "${GOOGLE_CLOUDSDK_ACCOUNT_FILE}";then echo "OK: GOOGLE_CLOUDSDK_ACCOUNT_FILE is present. Authenticating with ${GOOGLE_CLOUDSDK_ACCOUNT_FILE}..." && gcloud auth activate-service-account --key-file="${GOOGLE_CLOUDSDK_ACCOUNT_FILE}" "${GOOGLE_CLOUDSDK_ACCOUNT_EMAIL}"; else echo "ERROR: GOOGLE_CLOUDSDK_ACCOUNT_FILE not present and is required to run the Google Cloud SDK. Exiting" && exit 1;fi
+
+}
+
+function export_process_sql() {
+
+    exec 200< $0
+    if ! flock -n 200; then echo "OK: There can be only one query process happening at once. Exit" && exit 1; fi
+    {
+    flock -s 200
+    # Update the database so any records missing the MD5 hash will get updated
+
+    echo "OK: Starting to run query ${GOOGLE_GOOGLE_BIGQUERY_SQL} ${GOOGLE_CLOUDSDK_CORE_PROJECT} ${GOOGLE_BIGQUERY_JOB_DATASET} ${START} ${END}"
+
+    bash -c "/usr/bin/bigquery-export ${GOOGLE_GOOGLE_BIGQUERY_SQL} ${GOOGLE_CLOUDSDK_CORE_PROJECT} ${GOOGLE_BIGQUERY_JOB_DATASET} ${START} ${END} >> /tmp/query.log 2>&1"
+
+    if [[ $? = 0 ]]; then echo "OK: ${GOOGLE_GOOGLE_BIGQUERY_SQL} query completed"; else echo "ERROR: ${GOOGLE_GOOGLE_BIGQUERY_SQL} query did not complete"; fi
+
+    } 200>/tmp/query.lock
+
+}
+
+function run() {
+  mode
+  account_auth
+  export_process_sql
+  echo "OK: All processes have completed."
+}
+
+run
+
+exit 0

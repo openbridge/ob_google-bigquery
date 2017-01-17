@@ -1,25 +1,32 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
-source ./env/gcloud.env
+dockerimage="openbridge/google-cloud"
+args=("$@")
 
-DOCKERIMAGE="openbridge/gcloud"
 
-docker rm $DOCKERIMAGE
-docker run -d --restart=always \
-    -e "CLOUDSDK_ACCOUNT_FILE=${CLOUDSDK_ACCOUNT_FILE}" \
-    -e "CLOUDSDK_CRON_FILE=${CLOUDSDK_CRON_FILE}" \
-    -e "CLOUDSDK_ACCOUNT_EMAIL=${CLOUDSDK_ACCOUNT_EMAIL}" \
-    -e "CLOUDSDK_CORE_PROJECT=${CLOUDSDK_CORE_PROJECT}" \
-    -e "CLOUDSDK_COMPUTE_ZONE=${CLOUDSDK_COMPUTE_ZONE}" \
-    -e "CLOUDSDK_COMPUTE_REGION=${CLOUDSDK_COMPUTE_REGION}" \
-    -e "AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}" \
-    -e "AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}" \
-    -e "BIGQUERY_SQL=${BIGQUERY_SQL}" \
-    -e "BIGQUERY_GA_DATASET=${BIGQUERY_GA_DATASET}" \
-    -e "GSBUCKET=${GSBUCKET}" \
-    -e "S3BUCKET=${S3BUCKET}" \
-    -e "LOG_FILE=${LOG_FILE}" \
-    "${DOCKERIMAGE}" \
-    cron
+function mode() {
+
+  if [[ ${args[0]} = "prod" ]]; then MODE="prod" && export MODE=${1}; else export MODE="test"; fi
+  if [[ -z ${args[1]} ]]; then START=$(date -d "1 day ago" "+%Y-%m-%d"); else START="${args[1]}" && echo "OK: START date passed... "; fi
+  if [[ -z ${args[2]} ]]; then END=$(date -d "1 day ago" "+%Y-%m-%d"); else END="${args[2]}" && echo "OK: END date passed... "; fi
+
+}
+
+function process() {
+
+  for i in ./env/*.env; do
+    echo "working on $i"
+    bash -c "docker run -it -v /Users/thomas/Documents/github/ob_google-cloud/auth/prod.json:/auth.json -v /Users/thomas/Documents/github/ob_google-cloud/sql:/sql --env-file ${i} ${dockerimage} bigquery-run ${MODE} ${START} ${END}"
+    if [[ $? = 0 ]]; then echo "OK: "; else echo "ERROR: "; fi
+  done
+}
+
+function run() {
+  mode
+  process
+  echo "OK: All processes have completed."
+}
+
+run
 
 exit 0
