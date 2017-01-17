@@ -1,4 +1,4 @@
-![Google](https://github.com/openbridge/ob_google-cloud/blob/master/images/google.png)
+![Google](https://github.com/openbridge/ob_google-cloud/blob/develop-temp/images/google.png)
 
 # Google Cloud SDK+ Docker Container
 - [Overview](#overview)
