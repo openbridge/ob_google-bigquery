@@ -1,45 +1,27 @@
 ![Google](https://github.com/openbridge/ob_google-cloud/blob/master/images/google.png)
 
-<!-- TOC depthFrom:1 depthTo:6 withLinks:1 updateOnSave:1 orderedList:0 -->
-
- ```
+# Google Cloud SDK+ Docker Container
 - [Overview](#overview)
-```
-
 - [Get Your Google Account](#get-your-google-account)
-
   - [Step 1: Getting Started = Setup Google Account](#step-1-getting-started-setup-google-account)
   - [Step 2: Create Your Google Cloud Project](#step-2-create-your-google-cloud-project)
   - [Step 3: Activate Google Cloud APIs](#step-3-activate-google-cloud-apis)
   - [Step 4: Google Cloud Authentication](#step-4-google-cloud-authentication)
-
     - [Setup Docker Authentication Volume](#setup-docker-authentication-volume)
     - [Using Authentication Volume](#using-authentication-volume)
     - [Setup Local Authentication File](#setup-local-authentication-file)
-
   - [Step 5: Complete!](#step-5-complete)
-
 - [Running BigQuery Export Operations](#running-bigquery-export-operations)
-
   - [Environment File = BigQuery Jobs](#environment-file-bigquery-jobs)
   - [AWS Credentials](#aws-credentials)
-
 - [Running Your Container](#running-your-container)
-
   - [Run Google Cloud SDK As Daemon](#run-google-cloud-sdk-as-daemon)
-
     - [Example: Docker Compose](#example-docker-compose)
-
   - [Ephemeral Google Cloud SDK Service](#ephemeral-google-cloud-sdk-service)
-
 - [Docker Run](#docker-run)
 - [Example Commands](#example-commands)
 - [Issues](#issues)
 - [Contributing](#contributing)
-
-<!-- /TOC -->
-
- # Google Cloud SDK+ Docker Container
 
 ## Overview
 
