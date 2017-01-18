@@ -82,9 +82,9 @@ SELECT
   hits.page.searchKeyword,
   hits.page.searchCategory,
   hits.product.isImpression,
-  hits.product.localProductPrice,
-  hits.product.localProductRefundAmount,
-  hits.product.localProductRevenue,
+  hits.product.localproductPrice,
+  hits.product.localproductRefundAmount,
+  hits.product.localproductRevenue,
   hits.product.productBrand,
   hits.product.productListName,
   hits.product.productListPosition,
@@ -94,8 +94,8 @@ SELECT
   hits.product.productRevenue,
   hits.product.productSKU,
   hits.product.productVariant,
-  hits.product.v2ProductCategory,
-  hits.product.v2ProductName,
+  hits.product.v2productCategory,
+  hits.product.v2productName,
   hits.transaction.transactionId,
   hits.transaction.transactionRevenue,
   hits.transaction.transactionTax,
@@ -475,4 +475,4 @@ SELECT
   (CASE
       WHEN hits.customMetrics.index = 50 AND hits.customMetrics.value > 0 THEN hits.customMetrics.value
       ELSE NULL END) AS metric50,
-FROM TABLE_DATE_RANGE([{{CLOUDSDK_CORE_PROJECT}}:{{BIGQUERY_GA_DATASET}}.ga_sessions_],TIMESTAMP('{{QDATE}}'),TIMESTAMP('{{QDATE}}'))
+FROM TABLE_DATE_RANGE([{{GOOGLE_CLOUDSDK_CORE_PROJECT}}:{{GOOGLE_BIGQUERY_JOB_DATASET}}.ga_sessions_],TIMESTAMP('{{QDATE}}'),TIMESTAMP('{{QDATE}}'))

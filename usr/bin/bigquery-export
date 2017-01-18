@@ -36,7 +36,7 @@ function setup_gs_storage() {
   if test "${MODE}" = "prod"; then FILEDATE="${FDATE}"_"${FID}" && GOOGLE_STORAGE_PATH="production"; else FILEDATE="testing_${FDATE}_${FID}" && GOOGLE_STORAGE_PATH="testing"; fi
 
   # Setup the working bucket to be used for exports
-  # Check if the bucket exists
+  # Check if the bucket exists. .
   if ! gsutil ls gs:// | grep -q "gs://${GOOGLE_STORAGE_BUCKET}/"; then
      echo "OK: Creating bucket ${GOOGLE_STORAGE_BUCKET}"
      gsutil mb -p "${GOOGLE_CLOUDSDK_CORE_PROJECT}" -l us gs://"${GOOGLE_STORAGE_BUCKET}"
