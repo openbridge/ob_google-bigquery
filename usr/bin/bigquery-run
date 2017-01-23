@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 
 set -e
+set -x
 
 exec 200< $0
 
@@ -18,7 +19,7 @@ function mode() {
 
 function account_auth() {
 
-  if test -n "${GOOGLE_CLOUDSDK_ACCOUNT_FILE}";then echo "OK: GOOGLE_CLOUDSDK_ACCOUNT_FILE is present. Authenticating with ${GOOGLE_CLOUDSDK_ACCOUNT_FILE}..." && gcloud auth activate-service-account --key-file="${GOOGLE_CLOUDSDK_ACCOUNT_FILE}" "${GOOGLE_CLOUDSDK_ACCOUNT_EMAIL}"; else echo "ERROR: GOOGLE_CLOUDSDK_ACCOUNT_FILE not present and is required to run the Google Cloud SDK. Exiting" && exit 1;fi
+  if test -n "${GOOGLE_CLOUDSDK_ACCOUNT_FILE}";then echo "OK: GOOGLE_CLOUDSDK_ACCOUNT_FILE is present. Authenticating with ${GOOGLE_CLOUDSDK_ACCOUNT_FILE}..." && gcloud auth activate-service-account --key-file="${GOOGLE_CLOUDSDK_ACCOUNT_FILE}" "${GOOGLE_CLOUDSDK_ACCOUNT_EMAIL}"; else echo "INFO: GOOGLE_CLOUDSDK_ACCOUNT_FILE not present.  Assuming you are using --volumes-from for Google Cloud SDK authorization.";fi
 
 }
 

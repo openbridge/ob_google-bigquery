@@ -1,47 +1,58 @@
 ![Google](https://github.com/openbridge/ob_google-cloud/blob/develop-temp/images/google.png)
 
-# Google Cloud SDK+
+# Google Cloud SDK Plus
 
 <!-- TOC depthFrom:1 depthTo:6 withLinks:1 updateOnSave:1 orderedList:0 -->
 
-- [Google Cloud SDK+](#google-cloud-sdk)
+ - [Google Cloud SDK+](#google-cloud-sdk)
 - [Get Your Google Account](#get-your-google-account)
+
   - [Step 1: Getting Started = Setup Google Account](#step-1-getting-started-setup-google-account)
   - [Step 2: Create Your Google Cloud Project](#step-2-create-your-google-cloud-project)
   - [Step 3: Activate Google Cloud APIs](#step-3-activate-google-cloud-apis)
   - [Step 4: Google Cloud Authentication](#step-4-google-cloud-authentication)
+
     - [Setup Docker Authentication Volume](#setup-docker-authentication-volume)
     - [Using Authentication Volume](#using-authentication-volume)
     - [Setup Local Authentication File](#setup-local-authentication-file)
+
 - [BigQuery Exports](#bigquery-exports)
+
   - [How To Export Data From BigQuery](#how-to-export-data-from-bigquery)
+
     - [First, The SQL Query Definition](#first-the-sql-query-definition)
+
       - [Example: SQL Query](#example-sql-query)
+
     - [Second, The Job Definition](#second-the-job-definition)
+
       - [Example: Config File](#example-config-file)
+
     - [Putting Them Together](#putting-them-together)
+
       - [Example: `ga_bounces`](#example-gabounces)
+
   - [Delivering Exports To Google Cloud Storage](#delivering-exports-to-google-cloud-storage)
   - [Transfering Exports To Amazon S3](#transfering-exports-to-amazon-s3)
+
 - [Example: Running Batch Export](#example-running-batch-export)
 - [Running Your Container](#running-your-container)
+
   - [Run Google Cloud SDK As Daemon](#run-google-cloud-sdk-as-daemon)
+
     - [Example: Docker Compose](#example-docker-compose)
+
 - [Examples: Google Cloud SDK Service](#examples-google-cloud-sdk-service)
 - [Issues](#issues)
 - [Contributing](#contributing)
 
 <!-- /TOC -->
 
-# Overview
+ # Overview
 
 This Docker container is meant to simplify running Google Cloud operations. It was originally created to perform "cloud-to-cloud" operations, specifically BigQuery exports and syncing files to Amazon S3\. However, you can run any commands supported by the SDK via the container.
 
-The container is based on the following:<br>
-**Operating System:** Alpine `Latest:3.5`<br>
-**Google SDK Version:** `139.0.1`
-
-# Get Your Google Account
+# Get A Google Cloud Platform Account
 
 ## Step 1: Getting Started = Setup Google Account
 
@@ -59,9 +70,9 @@ For details on how to do this, the Google [documentation](https://developers.goo
 
 ## Step 4: Google Cloud Authentication
 
-The preferred methods of authentication is using a Google Cloud OAuth Service Account docker volume or auth file. Without the account volume or file you will not get far as access will be denied. The Google Service Account Authentication [documentation](https://cloud.google.com/storage/docs/authentication?hl=en#service_accounts) details how to generate the file.
+The preferred methods of authentication is using a Google Cloud OAuth Service Account docker volume or auth file. Without the account volume or auth file you will not get far as access will be denied. The Google Service Account Authentication [documentation](https://cloud.google.com/storage/docs/authentication?hl=en#service_accounts) details how to generate the file.
 
-### Setup Docker Authentication Volume
+### Using A Docker Authentication Volume
 
 Follow these instructions if you are running docker _outside_ of Google Compute Engine:
 
@@ -75,7 +86,7 @@ If you would like to use service account instead please look here:
 docker run -t -i --name gcloud-config openbridge/google-cloud gcloud auth activate-service-account <your-service-account-email> --key-file /tmp/your-key.p12 --project <your-project-id>
 ```
 
-### Using Authentication Volume
+### Selecting You Docker Authentication Volume
 
 Re-use the credentials from gcloud-config volumes & run sdk commands:
 
@@ -91,9 +102,9 @@ If you are using this image from _within_ [Google Compute Engine](https://cloud.
   docker run --rm -ti openbridge/google-cloud gsutil ls
 ```
 
-### Setup Local Authentication File
+### Using A Local Authentication File
 
-If you do not want to use a Docker volume, you can also use a auth file. There is a sample auth file here: `samples/auth-sample.json`.
+If you do not want to use a Docker Authentication Volume, you can also use a auth file. There is a sample auth file here: `samples/auth-sample.json`.
 
 Once the file is complete, place it into the `./auth` directory within the project. The next step is to reference the path to your authentication file in the `.env` file. This is done by setting the path for the variable `GOOGLE_CLOUDSDK_ACCOUNT_FILE=`.
 
@@ -102,14 +113,14 @@ For example, if you name your auth file `creds.json` you would set the config to
 To use your authentication file, you need to mount it within the container in the same location as specified in your `.env` file:
 
 ```bash
-docker run -it -v /Users/bob/Documents/github/ob_google-cloud/auth/creds.json:/creds.json -v /Users/bob/Documents/github/ob_google-cloud/sql:/sql --env-file ${i} openbridge/google-cloud gcloud info
+docker run -it -v /Users/bob/Documents/github/ob_google-cloud/auth/creds.json:/creds.json --env-file ./env/my.env openbridge/google-cloud gcloud info
 ```
 
 # BigQuery Exports
 
-In addition to running Google Cloud SDK operations, the container is designed to be able to perform BigQuery export operations.The service exports the results of that query to Google Cloud storage and, if needed, to Amazon S3\. This will provides you a consistent, clean wat to export data out of BigQuery into compressed (gzip) comma separated ASCII files.
+In addition to running Google Cloud SDK operations, the container is designed to be able to perform BigQuery export operations. The built-in BigQuery service can export the results of a query to Google Cloud storage and, if needed, to Amazon S3\. This provides you a consistent, clean way to export data out of BigQuery into compressed (gzip) comma separated ASCII files.
 
-## How To Export Data From BigQuery
+## How To Export Data From BigQuery?
 
 There are two parts to the export process. The first is the `.sql` query file and the second is the `.env` job file. The `.env` was referenced earlier as a method to use a local authentication file.
 
@@ -117,7 +128,7 @@ There are two parts to the export process. The first is the `.sql` query file an
 
 The export process leverages the `.sql` files stored in the `./sql/*` directory. These files provide the query defintion for an export. A `sql` definition is relatively straightforward. If you have any experience with SQL, you likely have come across these files before. The `sql` file contains a query written in SQL (Structured Query Language). It contains SQL code used to query, modify, update and delete the contents of a relational database.
 
-In out use case, most queries will run a query to generate a result set for export. Here is an example that dynamically sets the the FROM parts of the query based on the job configuration file (more on this later). You are certainly free to hard code those attributes. However, if you wanted to automatically run this everyday then hard coding might not be the best approach.
+In our use case, most queries will run a query to generate a result set for export. Here is an example that dynamically sets the FROM parts of the query based on the job configuration file (more on this later). You are certainly free to hard code those attributes. However, if you wanted to automatically run this everyday then hard coding might not be the best approach.
 
 #### Example: SQL Query
 
@@ -257,27 +268,39 @@ How long are files presisted in that bucket? There is a current lifecycle policy
 
 You will notice the use of AWS credentials in addition to Google ones. The AWS creds are present to support "cloud-to-cloud" transactions. For example, `/cron/crontab.conf` shows automated file transfers from Google Cloud drive to Amazon S3.
 
+Here is the construct for specifying the S3 location:
+
+`AWS_S3_BUCKET=<bucket name><path>`
+
+Here is an example:
+
+`AWS_S3_BUCKET=mybucket/the/path/to/my/directory/ga_bounces`
+
 # Example: Running Batch Export
 
-Also included is a simple shell script `RUN.sh` to run the container. You may need to tweak this to fit your environment/setup.
+Also included is a simple shell script `/bigquery-job.sh` to run the container. You may need to tweak this to fit your environment/setup.
 
 ```bash
 /usr/bin/env bash -c 'bigquery-job <mode> <start date> <end date>'
 ```
 
-You can set `mode` to "prod" or "test". For start date and end date, this reflects the date range the query should be performing. If you hard coded those values in your `.sql` file, then these values will do nothing. The default values if none are supplied as parameters will be to query for "yesterday".
+You can set `mode` to "prod" or "test".
 
-Dates should be in Year-month-day format (i.e., 2017-01-01)
+For start date and end date, this reflects the date range the query should be performing. If you hard coded those values in your `.sql` file, then these values will do nothing. The default values if none are supplied as parameters will be to query for "yesterday". Dates should be in Year-month-day format (i.e., 2017-01-01)
 
-This will run is production mode, setting the query start and end dates to January 1, 2017
+## Example Using `bigquery-job`
+
+This command will run is production mode, setting the query start and end dates to January 1, 2017
 
 ```bash
 /usr/bin/env bash -c 'bigquery-job prod 2017-01-01 2017-01-01'
 ```
 
+This will run a query for January 1st, 2017\. If you are running it on January 2nd, then you will be pulling for the full date. However, if you run this at 5PM on the 1st, you will only pull partial data. Be mindful of what is resident in those upstream tables and that your query is aligned to the presence of the desired data.
+
 When `bigquery-job` is run, it is designed run all the jobs present in the `./env` directory.
 
-if you wanted to set this up as a recuring operation, you can create cron task:
+If you wanted to set this up as a recuring operation, you can create cron task:
 
 ```bash
 05 12 * * * /usr/bin/env bash -c 'bigquery-job prod 2017-01-01 2017-01-01'
@@ -286,12 +309,12 @@ if you wanted to set this up as a recuring operation, you can create cron task:
 However, you don't have to use this job wrapper. You can call the process directly via Docker:
 
 ```bash
-docker run -it -v /Users/bob/Documents/github/ob_google-cloud/auth/prod.json:/auth.json -v /Users/bob/Documents/github/ob_google-cloud/sql:/sql --env-file ${i} ${dockerimage} bigquery-run ${MODE} ${START} ${END}"
+docker run -it -v /Users/bob/Documents/github/ob_google-cloud/auth/prod.json:/auth.json -v /Users/bob/Documents/github/ob_google-cloud/sql:/sql --env-file /env/file.env openbridge/google-cloud bigquery-run prod 2017-01-01 2017-01-01"
 ```
 
 # Running Your Container
 
-We have already shown examples on how to run a container. However, there may be cases where you want the container to be running 24/7 because you have configured `cron` tasks to execute at set intervals. The next section describes how to run your container as a daemon.
+We have already shown examples on how to run commands via the container. However, there may be cases where you want the container to be running 24/7 because you have configured `cron` tasks to execute at set intervals. The next section describes how to run your container as a daemon.
 
 ## Run Google Cloud SDK As Daemon
 
@@ -327,12 +350,12 @@ This assumes you have configured everything in `./env/gcloud-sample.env` and hav
 
 You can get fairly sophisticated with your compose configs. The included `docker-compose.yml` is a starting point. Take a look at the Docker Compose [documentation](https://docs.docker.com/compose/compose-file/) for a more indepth look at what is possible.
 
-# Examples: Google Cloud SDK Service
+# Example Commands
 
 This example includes AWS credentials:
 
 ```bash
-docker run -it --restart=always --rm \
+docker run -it --rm \
     -e "GOOGLE_CLOUDSDK_ACCOUNT_FILE=/auth.json " \
     -e "GOOGLE_CLOUDSDK_ACCOUNT_EMAIL=foo@appspot.gserviceaccount.com" \
     -e "GOOGLE_CLOUDSDK_CRONFILE=/cron/crontab.conf" \
@@ -381,7 +404,7 @@ Run by setting the name, start and end dates:
 /usr/bin/env bash -c 'bigquery-export ga360 foo-casing-539217 827858240 2016-10-21 2016-10-21'
 ```
 
-Remove BQ dataset:
+/usr/bin/env bash -c 'bigquery-export ga360master hasbro-casing-139217 127357242 2017-01-01 2017-01-01' Remove BQ dataset:
 
 ```bash
 bq rm -r -f "${GOOGLE_BIGQUERY_WD_DATASET}"
@@ -435,6 +458,12 @@ Then at the command prompt:
 GASESSIONSCHECK=$(bq ls -n 1000 "${GOOGLE_CLOUDSDK_CORE_PROJECT}":"${GOOGLE_BIGQUERY_JOB_DATASET}" > check_test.txt && grep -q "ga_sessions_${FDATE}" check_test.txt && echo "0" || echo "1")
 `
 ```
+
+# Build Details
+
+The container is based on the following:<br>
+**Operating System:** Alpine `Latest:3.5`<br>
+**Google SDK Version:** `139.0.1`
 
 # Issues
 
