@@ -27,8 +27,6 @@ SELECT
   trafficSource.medium,
   trafficSource.keyword,
   trafficSource.adContent,
-  hits.sourcePropertyInfo.sourcePropertyTrackingId,
-  hits.sourcePropertyInfo.sourcePropertyDisplayName,
   hits.type,
   hits.eventInfo.eventValue,
   hits.eventInfo.eventLabel,

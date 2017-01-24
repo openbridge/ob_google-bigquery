@@ -22,11 +22,13 @@ function process() {
 }
 
 function run() {
-  mode
+
+  mode "$@"
   process
   echo "OK: All processes have completed."
+
 }
 
-run
+run "$@"
 
 exit 0

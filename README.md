@@ -1,12 +1,10 @@
 ![Google](https://github.com/openbridge/ob_google-cloud/blob/develop-temp/images/google.png)
 
-# Google Cloud SDK Plus
+# Google Cloud SDK +Plus
 
-<!-- TOC depthFrom:1 depthTo:6 withLinks:1 updateOnSave:1 orderedList:0 -->
+- [Google Cloud SDK+](#google-cloud-sdk)
 
- - [Google Cloud SDK+](#google-cloud-sdk)
-- [Get Your Google Account](#get-your-google-account)
-
+  - [Get Your Google Account](#get-your-google-account)
   - [Step 1: Getting Started = Setup Google Account](#step-1-getting-started-setup-google-account)
   - [Step 2: Create Your Google Cloud Project](#step-2-create-your-google-cloud-project)
   - [Step 3: Activate Google Cloud APIs](#step-3-activate-google-cloud-apis)
@@ -16,7 +14,7 @@
     - [Using Authentication Volume](#using-authentication-volume)
     - [Setup Local Authentication File](#setup-local-authentication-file)
 
-- [BigQuery Exports](#bigquery-exports)
+  - [BigQuery Exports](#bigquery-exports)
 
   - [How To Export Data From BigQuery](#how-to-export-data-from-bigquery)
 
@@ -33,26 +31,32 @@
       - [Example: `ga_bounces`](#example-gabounces)
 
   - [Delivering Exports To Google Cloud Storage](#delivering-exports-to-google-cloud-storage)
-  - [Transfering Exports To Amazon S3](#transfering-exports-to-amazon-s3)
 
-- [Example: Running Batch Export](#example-running-batch-export)
-- [Running Your Container](#running-your-container)
+  - [Transferring Exports To Amazon S3](#Transferring-exports-to-amazon-s3)
+
+  - [Example: Running Batch Export](#example-running-batch-export)
+
+  - [Running Your Container](#running-your-container)
 
   - [Run Google Cloud SDK As Daemon](#run-google-cloud-sdk-as-daemon)
 
     - [Example: Docker Compose](#example-docker-compose)
 
-- [Examples: Google Cloud SDK Service](#examples-google-cloud-sdk-service)
-- [Issues](#issues)
-- [Contributing](#contributing)
+  - [Examples: Google Cloud SDK Service](#examples-google-cloud-sdk-service)
 
-<!-- /TOC -->
+  - [Issues](#issues)
 
- # Overview
+  - [Contributing](#contributing)
 
-This Docker container is meant to simplify running Google Cloud operations. It was originally created to perform "cloud-to-cloud" operations, specifically BigQuery exports and syncing files to Amazon S3\. However, you can run any commands supported by the SDK via the container.
+# Overview
+
+This Docker container is meant to simplify running Google Cloud operations. This means you do not have to worry about installation, configuration or ongoing maintenance related to an SDK environment. This can be helpful to those who would prefer to not to be responsible for those activities.
+
+This service was originally created to perform "cloud-to-cloud" operations, specifically BigQuery exports and syncing files to Amazon S3\. However, you can run any commands supported by the SDK via the container.
 
 # Get A Google Cloud Platform Account
+
+For a Google Cloud SDK +Plus container to work, it requires a Google Cloud account!
 
 ## Step 1: Getting Started = Setup Google Account
 
@@ -70,7 +74,9 @@ For details on how to do this, the Google [documentation](https://developers.goo
 
 ## Step 4: Google Cloud Authentication
 
-The preferred methods of authentication is using a Google Cloud OAuth Service Account docker volume or auth file. Without the account volume or auth file you will not get far as access will be denied. The Google Service Account Authentication [documentation](https://cloud.google.com/storage/docs/authentication?hl=en#service_accounts) details how to generate the file.
+The preferred methods of authentication is using a _Google Cloud OAuth Service Account_ docker volume or auth file. Without an account volume or auth file you will not get far. No account = no access.
+
+The Google Service Account Authentication [documentation](https://cloud.google.com/storage/docs/authentication?hl=en#service_accounts) details how to generate the file.
 
 ### Using A Docker Authentication Volume
 
@@ -80,13 +86,15 @@ Follow these instructions if you are running docker _outside_ of Google Compute 
 docker run -t -i --name gcloud-config openbridge/google-cloud gcloud init
 ```
 
-If you would like to use service account instead please look here:
+If you would like to use service account the run command would look like this:
 
 ```bash
 docker run -t -i --name gcloud-config openbridge/google-cloud gcloud auth activate-service-account <your-service-account-email> --key-file /tmp/your-key.p12 --project <your-project-id>
 ```
 
-### Selecting You Docker Authentication Volume
+Notice the email, key and project variables are needed to run it this way.
+
+### Using Your Docker Authentication Volume
 
 Re-use the credentials from gcloud-config volumes & run sdk commands:
 
@@ -104,13 +112,13 @@ If you are using this image from _within_ [Google Compute Engine](https://cloud.
 
 ### Using A Local Authentication File
 
-If you do not want to use a Docker Authentication Volume, you can also use a auth file. There is a sample auth file here: `samples/auth-sample.json`.
+If you do not want to use a Docker Authentication Volume, you can also use a local auth file. There is a sample auth file here: `samples/auth-sample.json`.
 
 Once the file is complete, place it into the `./auth` directory within the project. The next step is to reference the path to your authentication file in the `.env` file. This is done by setting the path for the variable `GOOGLE_CLOUDSDK_ACCOUNT_FILE=`.
 
 For example, if you name your auth file `creds.json` you would set the config to `GOOGLE_CLOUDSDK_ACCOUNT_FILE=/creds.json`. This sets the path to the creds file in the root of the container.
 
-To use your authentication file, you need to mount it within the container in the same location as specified in your `.env` file:
+To use your authentication file, you need to mount it within the container in the same location specified in your `.env` file:
 
 ```bash
 docker run -it -v /Users/bob/Documents/github/ob_google-cloud/auth/creds.json:/creds.json --env-file ./env/my.env openbridge/google-cloud gcloud info
@@ -118,17 +126,17 @@ docker run -it -v /Users/bob/Documents/github/ob_google-cloud/auth/creds.json:/c
 
 # BigQuery Exports
 
-In addition to running Google Cloud SDK operations, the container is designed to be able to perform BigQuery export operations. The built-in BigQuery service can export the results of a query to Google Cloud storage and, if needed, to Amazon S3\. This provides you a consistent, clean way to export data out of BigQuery into compressed (gzip) comma separated ASCII files.
+In addition to running Google Cloud SDK operations, the container is designed to perform BigQuery export operations. The built-in BigQuery operations can export the results of a query to Google Cloud storage and, if needed, to Amazon S3\. This provides you a consistent, clean way to export data out of BigQuery into compressed (gzip) comma separated ASCII files.
 
 ## How To Export Data From BigQuery?
 
-There are two parts to the export process. The first is the `.sql` query file and the second is the `.env` job file. The `.env` was referenced earlier as a method to use a local authentication file.
+There are two parts to the export process. The first is the `.sql` query file and the second is the `.env` job file. Note: the `.env` was referenced earlier as a method to use a local authentication file.
 
-### First, The SQL Query Definition
+### Part 1: The SQL Export Query Definition
 
-The export process leverages the `.sql` files stored in the `./sql/*` directory. These files provide the query defintion for an export. A `sql` definition is relatively straightforward. If you have any experience with SQL, you likely have come across these files before. The `sql` file contains a query written in SQL (Structured Query Language). It contains SQL code used to query, modify, update and delete the contents of a relational database.
+The export process leverages one or more `.sql` files stored in the `./sql/*` directory. These files provide the query definition for an export. A `sql` definition is relatively straightforward. If you have any experience with SQL, you likely have come across these files before. The `sql` file contains a query written in SQL (Structured Query Language). It contains SQL code used to query the contents of a relational database.
 
-In our use case, most queries will run a query to generate a result set for export. Here is an example that dynamically sets the FROM parts of the query based on the job configuration file (more on this later). You are certainly free to hard code those attributes. However, if you wanted to automatically run this everyday then hard coding might not be the best approach.
+In our use case, most queries will run a query to generate a result set for export. Here is an example that will query Google Analytics 360 data. The container will dynamically set the FROM parts of the query based on the job configuration file (more on this later). You are certainly free to hard code those attributes. However, if you wanted to automatically run this everyday then hard coding might not be the best approach.
 
 #### Example: SQL Query
 
@@ -149,7 +157,9 @@ GROUP BY source_medium
 ORDER BY sessions DESC
 ```
 
-You can setup as many queries as you want. The one caveat is that there can only be one `.sql` file per job.
+You can setup as many queries as you want. The one caveat is that there can only be one `.sql` file per job (.env file).
+
+#### Testing Your SQL
 
 Lastly, no validation, checks or testing of the SQL you provide is performed by the container. It is assumed that the SQL was validated and tested prior to being used. You can use the container to run tests of your query. For example, to enable standard SQL for a query, set the `--use_legacy_sql` flag to false. Then, reference the `sql` file you as part of a query command. The following test query runs using standard SQL file:
 
@@ -157,9 +167,9 @@ Lastly, no validation, checks or testing of the SQL you provide is performed by 
 docker run --rm -ti --volumes-from gcloud-config openbridge/google-cloud bq query --use_legacy_sql=false < /sql/myquery.sql
 ```
 
-### Second, The Job Definition
+### Part 2: The Export Job Definition
 
-A job leverages environment variables and uses a configuration to set them. While you can bypass use the configuration file, most of the documentation will assume you are choosing this approach. A job is intrinsically linked to the `.sql` file as it reflects the query a job should execute.
+A job leverages environment variables and uses a configuration file to set them. A job is intrinsically linked to the `.sql` file as it reflects the query a job should execute.
 
 #### Example: Config File
 
@@ -181,7 +191,9 @@ AWS_S3_BUCKET=bucketname/path/to/dir
 LOG_FILE=/tmp/gcloud.log
 ```
 
-The config file is should reflect the variables associated with a query and the resulting post processing operations for export. Here are a few of the key variables;
+While you can bypass use the configuration file, most of the documentation will assume you are choosing this approach.
+
+The config file should reflect the variables associated with a query as well as the post processing operations for export. Here are a few of the key variables;
 
 - All BigQuery resources belong to a Google Cloud Platform project. Each project is a separate compartment. The use of `GOOGLE_CLOUDSDK_CORE_PROJECT` is mean to provide the flexibility to assign a different project for a given job (vs binding it to just a single project)
 - Datasets enable you to organize and control access to your tables. A table must belong to a dataset, so you will need to create at least one dataset before loading/exporting data. The `GOOGLE_BIGQUERY_JOB_DATASET` should reflect the value of the dataset that cotains the table your `.sql` will query. For example, if you have `ga_master.sql` file then you should set this to `GOOGLE_GOOGLE_BIGQUERY_SQL=ga_master` (leave the .sql off)
@@ -189,7 +201,7 @@ The config file is should reflect the variables associated with a query and the 
 
 Those environment variables marked as required need to be included on all requests.
 
-### Putting Them Together
+### Example: Google Analytics Exports
 
 Lets says you have want to create exports for `bounces`, `clicks`, `visits` and `geography` from BigQuery. You would create a job config for each:
 
@@ -207,9 +219,9 @@ You would then make sure that you had the corresponding SQL queries defined:
 
 The `sql` files would contain the correct SQL syntax that aligns with the desired output.
 
-#### Example: `ga_bounces`
+#### Looking At `ga_bounces`
 
-The bounces job config would look like this:
+Lets dig into the `ga_bounces` example above. The bounces job config would look like this:
 
 ```bash
 GOOGLE_CLOUDSDK_ACCOUNT_FILE=/auth.json
@@ -229,6 +241,8 @@ LOG_FILE=/tmp/gcloud.log
 
 Note the reference to `ga_bounces` in the `GOOGLE_GOOGLE_BIGQUERY_SQL` variable. This tells the processing application to grab the `/sql/ga_bounces.sql` file to use as the query for the export.
 
+Here is the `/sql/ga_bounces.sql` SQL definitiion:
+
 ```sql
 SELECT
 trafficSource.source + ' / ' + trafficSource.medium AS source_medium,
@@ -246,7 +260,7 @@ GROUP BY source_medium
 ORDER BY sessions DESC
 ```
 
-The `GOOGLE_GOOGLE_BIGQUERY_SQL` variable is also used to name the export files.
+Note that `GOOGLE_GOOGLE_BIGQUERY_SQL` variable is used in other places. For example, it is used in the export filenames as well as in temp and working tables.
 
 ## Delivering Exports To Google Cloud Storage
 
@@ -262,7 +276,7 @@ For our `ga_bounces` example, the resulting exports would be transfer to locatio
 gs://openbridge-buzz/production/ga_bounces/20170101_asd12XZ_ga_bounces_export_000.gz
 ```
 
-How long are files presisted in that bucket? There is a current lifecycle policy set keep the export for `30` days. The `/lifecycle.json` defines the bucket policy for the retention of files sotred there. If you want to persist them for a longer time period edit the policy accordingly. Simply change the `30` to whatever number of days you feel is needed.
+How long are files persisted in that bucket? There is a current lifecycle policy set keep the export for `30` days. The `/lifecycle.json` defines the bucket policy for the retention of files stored there. If you want to persist them for a longer time period edit the policy accordingly. Simply change the `30` to whatever number of days you feel is needed.
 
 ## Transferring Exports To Amazon S3
 
