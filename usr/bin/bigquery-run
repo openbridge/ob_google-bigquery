@@ -31,11 +31,11 @@ function export_process_sql() {
     flock -s 200
     # Update the database so any records missing the MD5 hash will get updated
 
-    echo "OK: Starting to run query ${GOOGLE_GOOGLE_BIGQUERY_SQL} ${GOOGLE_CLOUDSDK_CORE_PROJECT} ${GOOGLE_BIGQUERY_JOB_DATASET} ${START} ${END}"
+    echo "OK: Starting to run query ${GOOGLE_BIGQUERY_SQL} ${GOOGLE_CLOUDSDK_CORE_PROJECT} ${GOOGLE_BIGQUERY_JOB_DATASET} ${START} ${END}"
 
-    bash -c "/usr/bin/bigquery-export ${GOOGLE_GOOGLE_BIGQUERY_SQL} ${GOOGLE_CLOUDSDK_CORE_PROJECT} ${GOOGLE_BIGQUERY_JOB_DATASET} ${START} ${END} >> /tmp/query.log 2>&1"
+    bash -c "/usr/bin/bigquery-export ${GOOGLE_BIGQUERY_SQL} ${GOOGLE_CLOUDSDK_CORE_PROJECT} ${GOOGLE_BIGQUERY_JOB_DATASET} ${START} ${END} >> /tmp/query.log 2>&1"
 
-    if [[ $? = 0 ]]; then echo "OK: ${GOOGLE_GOOGLE_BIGQUERY_SQL} query completed"; else echo "ERROR: ${GOOGLE_GOOGLE_BIGQUERY_SQL} query did not complete"; fi
+    if [[ $? = 0 ]]; then echo "OK: ${GOOGLE_BIGQUERY_SQL} query completed"; else echo "ERROR: ${GOOGLE_BIGQUERY_SQL} query did not complete"; fi
 
     } 200>/tmp/query.lock
 

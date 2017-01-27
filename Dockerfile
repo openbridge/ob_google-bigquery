@@ -1,7 +1,7 @@
 FROM alpine:3.5
 MAINTAINER Thomas Spicer <thomas@openbridge.com>
 
-ENV CLOUDSDK_VERSION=140.0.0
+ENV CLOUDSDK_VERSION=141.0.0
 ENV CLOUDSDK_PYTHON_SITEPACKAGES=1
 ENV PATH /google-cloud-sdk/bin:$PATH
 ENV HOME /
@@ -19,6 +19,11 @@ ENV BUILD_DEPS \
         py2-pip \
         gnupg \
         musl-dev
+
+COPY usr/bin/ /usr/bin/
+COPY lifecycle.json /lifecycle.json
+COPY sql/ /sql/
+COPY docker-entrypoint.sh /docker-entrypoint.sh
 
 RUN set -x \
     && apk add --no-cache --virtual .persistent-deps \
@@ -42,15 +47,9 @@ RUN set -x \
     && wget --no-check-certificate --directory-prefix=/usr/bin https://raw.githubusercontent.com/openbridge/ob_hipchat/master/hipchat \
     && rm -f google-cloud-sdk-${CLOUDSDK_VERSION}-linux-x86_64.tar.gz \
     && mkdir /.ssh \
-    && rm -rf /var/cache/apk/*\
+    && chmod +x /usr/bin/bigquery-run /usr/bin/bigquery-export /docker-entrypoint.sh /usr/bin/hipchat \
+    && rm -rf /var/cache/apk/* \
     && apk del .build-deps
-
-COPY usr/bin/ /usr/bin/
-COPY lifecycle.json /lifecycle.json
-COPY sql/ /sql/
-COPY docker-entrypoint.sh /docker-entrypoint.sh
-
-RUN chmod +x /usr/bin/bigquery-run /usr/bin/bigquery-export /docker-entrypoint.sh /usr/bin/hipchat
 
 VOLUME ["/.config"]
 

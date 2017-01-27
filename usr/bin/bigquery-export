@@ -9,7 +9,7 @@ if ! flock -n 200; then echo "OK: There can be only one query process happening 
 args=("$@")
 
 # Google Settings
-if [[ -z ${args[1]} ]]; then echo "OK: BIGQUERY SQL was not passed. Using container default"; else GOOGLE_GOOGLE_BIGQUERY_SQL=${1}; fi
+if [[ -z ${args[1]} ]]; then echo "OK: BIGQUERY SQL was not passed. Using container default"; else GOOGLE_BIGQUERY_SQL=${1}; fi
 if [[ -z ${args[2]} ]]; then echo "OK: CLOUDSDK PROJECT was not passed. Using container default"; else GOOGLE_CLOUDSDK_CORE_PROJECT=${2}; fi
 if [[ -z ${args[3]} ]]; then echo "OK: BIGQUERY DATASET was not passed. Using container default"; else GOOGLE_BIGQUERY_JOB_DATASET=${3}; fi
 
@@ -32,12 +32,12 @@ CUR=${START}
   fi
 
 # Check is the passed SQL is present.
-  if [[ -f "/sql/${GOOGLE_GOOGLE_BIGQUERY_SQL}.sql" ]]; then
+  if [[ -f "/sql/${GOOGLE_BIGQUERY_SQL}.sql" ]]; then
 
-      echo "OK: The ${GOOGLE_GOOGLE_BIGQUERY_SQL} is present. Ready to run..."
+      echo "OK: The ${GOOGLE_BIGQUERY_SQL} is present. Ready to run..."
 
   else
-      echo "ERROR: The is no ${GOOGLE_GOOGLE_BIGQUERY_SQL} present. Can not run without ${GOOGLE_GOOGLE_BIGQUERY_SQL} being present. Please check your configs." && exit 1
+      echo "ERROR: The is no ${GOOGLE_BIGQUERY_SQL} present. Can not run without ${GOOGLE_BIGQUERY_SQL} being present. Please check your configs." && exit 1
   fi
 
 function setup_gs_storage() {
@@ -47,23 +47,39 @@ function setup_gs_storage() {
 
   FID=$(cat /dev/urandom | tr -cd [:alnum:] | head -c 8)
 
-  if test "${MODE}" = "prod"; then
-      FILEDATE="${FDATE}"_"${FID}" && GOOGLE_STORAGE_PATH="production"
+  if [[ -z ${GOOGLE_STORAGE_PATH} ]]; then
+
+     if [[ "${MODE}" = "prod" ]]; then
+       FILEDATE="${FDATE}"_"${FID}" && GOOGLE_STORAGE_PATH="production"
+     else
+       FILEDATE="testing_${FDATE}_${FID}" && GOOGLE_STORAGE_PATH="testing"
+     fi
+
   else
-      FILEDATE="testing_${FDATE}_${FID}" && GOOGLE_STORAGE_PATH="testing"
+     echo "OK: GOOGLE_STORAGE_PATH is set to ${GOOGLE_STORAGE_PATH}"
+     FILEDATE="${FDATE}"_"${FID}"
   fi
 
   # Setup the working bucket to be used for exports
-  # Check if the bucket exists. .
-  if ! gsutil ls gs:// | grep -q "gs://${GOOGLE_STORAGE_BUCKET}/"; then
+  # Check if the bucket exists.
 
-     echo "OK: Creating bucket ${GOOGLE_STORAGE_BUCKET}"
-     gsutil mb -p "${GOOGLE_CLOUDSDK_CORE_PROJECT}" -l us gs://"${GOOGLE_STORAGE_BUCKET}"
-     gsutil lifecycle set /lifecycle.json gs://"${GOOGLE_STORAGE_BUCKET}"/
+  if [[ -n "${GOOGLE_CLOUDSDK_ACCOUNT_FILE}" ]]; then
+
+    echo "INFO: gs:// check skipped due to a Google auth bug"
 
   else
-     echo "INFO: ${GOOGLE_STORAGE_BUCKET} bucket already exists"
-  fi
+
+    if ! gsutil ls gs:// | grep -q "gs://${GOOGLE_STORAGE_BUCKET}/"; then
+      echo "OK: Creating bucket ${GOOGLE_STORAGE_BUCKET}"
+      gsutil mb -p "${GOOGLE_CLOUDSDK_CORE_PROJECT}" -l us gs://"${GOOGLE_STORAGE_BUCKET}"
+      gsutil lifecycle set /lifecycle.json gs://"${GOOGLE_STORAGE_BUCKET}"/
+
+    else
+
+      echo "INFO: ${GOOGLE_STORAGE_BUCKET} bucket already exists"
+
+    fi
+fi
 
 }
 
@@ -72,62 +88,68 @@ function setup_bq_tables() {
   # Set working dataset and make sure tables auto-expire after an hour
   # We will archive our processed data for audting purposes for 30 days
 
-  GOOGLE_BIGQUERY_WD_DATASET="${GOOGLE_BIGQUERY_JOB_DATASET}_wd"
-  GOOGLE_BIGQUERY_ARCHIVE_DATASET="${GOOGLE_BIGQUERY_JOB_DATASET}_ARCHIVE"
+  GOOGLE_BIGQUERY_WD_DATASET="${GOOGLE_BIGQUERY_JOB_DATASET}_${GOOGLE_BIGQUERY_SQL}_wd"
+  GOOGLE_BIGQUERY_ARCHIVE_DATASET="${GOOGLE_BIGQUERY_JOB_DATASET}_${GOOGLE_BIGQUERY_SQL}_archive"
 
-  if ! bq ls -d | grep -q "${GOOGLE_BIGQUERY_JOB_DATASET}_wd"; then
+  if ! bq ls -d | grep -q "${GOOGLE_BIGQUERY_JOB_DATASET}_${GOOGLE_BIGQUERY_SQL}_wd"; then
 
      echo "OK: ${GOOGLE_BIGQUERY_JOB_DATASET}_wd does not exist. Creating..."
      bq mk --default_table_expiration 3600 "${GOOGLE_BIGQUERY_WD_DATASET}"
 
   else
-     echo "INFO: ${GOOGLE_BIGQUERY_JOB_DATASET}_WD dataset already exists"
+     echo "INFO: ${GOOGLE_BIGQUERY_JOB_DATASET}_${GOOGLE_BIGQUERY_SQL}_wd dataset already exists"
   fi
 
-  if ! bq ls -d | grep -q "${GOOGLE_BIGQUERY_JOB_DATASET}_ARCHIVE"; then
+  if ! bq ls -d | grep -q "${GOOGLE_BIGQUERY_JOB_DATASET}_${GOOGLE_BIGQUERY_SQL}_archive"; then
 
-     echo "OK: ${GOOGLE_BIGQUERY_JOB_DATASET}_ARCHIVE does not exist. Creating..."
+     echo "OK: ${GOOGLE_BIGQUERY_JOB_DATASET}_${GOOGLE_BIGQUERY_SQL}_archive does not exist. Creating..."
      bq mk --default_table_expiration 2678400 "${GOOGLE_BIGQUERY_ARCHIVE_DATASET}"
 
   else
-     echo "INFO: ${GOOGLE_BIGQUERY_JOB_DATASET}_ARCHIVE dataset already exists."
+     echo "INFO: ${GOOGLE_BIGQUERY_JOB_DATASET}_archive dataset already exists."
   fi
 
   #Import the query and set the required BQ variables
-  BQQUERY=$(cat /sql/"${GOOGLE_GOOGLE_BIGQUERY_SQL}".sql | sed "s/{{QDATE}}/${QDATE}/g; s/{{GOOGLE_CLOUDSDK_CORE_PROJECT}}/${GOOGLE_CLOUDSDK_CORE_PROJECT}/g; s/{{GOOGLE_BIGQUERY_JOB_DATASET}}/${GOOGLE_BIGQUERY_JOB_DATASET}/g" )
+  BQQUERY=$(cat /sql/${GOOGLE_BIGQUERY_SQL}.sql | sed "s/{{QDATE}}/${QDATE}/g; s/{{GOOGLE_BIGQUERY_TABLE}}/${GOOGLE_BIGQUERY_TABLE}/g; s/{{GOOGLE_CLOUDSDK_CORE_PROJECT}}/${GOOGLE_CLOUDSDK_CORE_PROJECT}/g; s/{{GOOGLE_BIGQUERY_JOB_DATASET}}/${GOOGLE_BIGQUERY_JOB_DATASET}/g" )
 
 }
 
-function ga_check() {
+function table_check() {
 
-  # Check if the daily GA360 session data has been loaded by Google
-  for i in $(bq ls -n 9999 "${GOOGLE_CLOUDSDK_CORE_PROJECT}":"${GOOGLE_BIGQUERY_JOB_DATASET}" | grep "ga_sessions_${FDATE}" | awk '{print $1}'); do if test "${i}" = "ga_sessions_${FDATE}"; then GASESSIONSCHECK="0"; else GASESSIONSCHECK="1"; fi done
+  # Check if the table exists
 
-  if test "${GASESSIONSCHECK}" = "0"; then
-     echo "OK: ga_sessions_${FDATE} table exists. Run export process..."
-     bq query --batch --allow_large_results --destination_table="${GOOGLE_BIGQUERY_WD_DATASET}"."${FILEDATE}"_"${GOOGLE_GOOGLE_BIGQUERY_SQL}" "${BQQUERY}"
+  if [[ ${GOOGLE_BIGQUERY_TABLE} = *"ga_sessions"* ]]; then
+      GOOGLE_TABLE_TEST="ga_sessions_${FDATE}"
   else
-     echo "ERROR: The ga_sessions_${FDATE} data is not present yet. Cant start export process" && exit 1
+      GOOGLE_TABLE_TEST=${GOOGLE_BIGQUERY_TABLE}
   fi
 
+  for i in $(bq ls -n 9999 "${GOOGLE_CLOUDSDK_CORE_PROJECT}":"${GOOGLE_BIGQUERY_JOB_DATASET}" | grep "${GOOGLE_TABLE_TEST}" | awk '{print $1}'); do if test "${i}" = "${GOOGLE_TABLE_TEST}"; then GASESSIONSCHECK="0"; else GASESSIONSCHECK="1"; fi done
+
+  if [[ "${GASESSIONSCHECK}" = "0" ]]; then
+     echo "OK: ${GOOGLE_TABLE_TEST} table exists. Run export process..."
+     bq query --batch --allow_large_results --destination_table="${GOOGLE_BIGQUERY_WD_DATASET}"."${FILEDATE}"_"${GOOGLE_BIGQUERY_SQL}" "${BQQUERY}"
+  else
+     echo "ERROR: The ${GOOGLE_TABLE_TEST} data is not present yet. Cant start export process" && exit 1
+  fi
 }
 
 function export_data() {
 
   # Check if the process created the daily export table in the working job dataset
-  for i in $(bq ls -n 9999 "${GOOGLE_CLOUDSDK_CORE_PROJECT}":"${GOOGLE_BIGQUERY_WD_DATASET}" | grep "${FILEDATE}_${GOOGLE_GOOGLE_BIGQUERY_SQL}" | awk '{print $1}'); do if test "${i}" = "${FILEDATE}_${GOOGLE_GOOGLE_BIGQUERY_SQL}"; then BQTABLECHECK="0"; else BQTABLECHECK="1"; fi done
+  for i in $(bq ls -n 9999 "${GOOGLE_CLOUDSDK_CORE_PROJECT}":"${GOOGLE_BIGQUERY_WD_DATASET}" | grep "${FILEDATE}_${GOOGLE_BIGQUERY_SQL}" | awk '{print $1}'); do if test "${i}" = "${FILEDATE}_${GOOGLE_BIGQUERY_SQL}"; then BQTABLECHECK="0"; else BQTABLECHECK="1"; fi done
 
   # We will perform a spot check to make sure that the job table in the working dataset does in fact have data present. If it does, run the export process
   if test "${BQTABLECHECK}" = "0"; then
 
-    echo "OK: ${FILEDATE}_${GOOGLE_GOOGLE_BIGQUERY_SQL} table exists. Checking record counts..."
+    echo "OK: ${FILEDATE}_${GOOGLE_BIGQUERY_SQL} table exists. Checking record counts..."
 
-    while read -r num; do echo "${num}" && if [[ $num =~ \"num\":\"([[:digit:]]+)\" ]] && (( BASH_REMATCH[1] > 1000 )); then echo "Ok: ${FILEDATE}_${GOOGLE_GOOGLE_BIGQUERY_SQL} table count test meet expectations. Ready to creat extracts..."
+    while read -r num; do echo "${num}" && if [[ $num =~ \"num\":\"([[:digit:]]+)\" ]] && (( BASH_REMATCH[1] > 1000 )); then echo "Ok: ${FILEDATE}_${GOOGLE_BIGQUERY_SQL} table count test meet expectations. Ready to creat extracts..."
 
-    bq extract --compression=GZIP ${GOOGLE_CLOUDSDK_CORE_PROJECT}:${GOOGLE_BIGQUERY_WD_DATASET}.${FILEDATE}_${GOOGLE_GOOGLE_BIGQUERY_SQL} gs://${GOOGLE_STORAGE_BUCKET}/${GOOGLE_STORAGE_PATH}/${GOOGLE_GOOGLE_BIGQUERY_SQL}/${FILEDATE}_${GOOGLE_GOOGLE_BIGQUERY_SQL}_export*.gz; fi done < <(echo "SELECT COUNT(*) as num FROM [${GOOGLE_CLOUDSDK_CORE_PROJECT}:${GOOGLE_BIGQUERY_WD_DATASET}.${FILEDATE}_${GOOGLE_GOOGLE_BIGQUERY_SQL}] HAVING COUNT(*) > 100000" | bq query --format json)
+    bq extract --compression=GZIP ${GOOGLE_CLOUDSDK_CORE_PROJECT}:${GOOGLE_BIGQUERY_WD_DATASET}.${FILEDATE}_${GOOGLE_BIGQUERY_SQL} gs://${GOOGLE_STORAGE_BUCKET}/${GOOGLE_STORAGE_PATH}/${GOOGLE_BIGQUERY_SQL}/${FILEDATE}_${GOOGLE_BIGQUERY_SQL}_export*.gz; fi done < <(echo "SELECT COUNT(*) as num FROM [${GOOGLE_CLOUDSDK_CORE_PROJECT}:${GOOGLE_BIGQUERY_WD_DATASET}.${FILEDATE}_${GOOGLE_BIGQUERY_SQL}] HAVING COUNT(*) > 100000" | bq query --format json)
 
   else
-    echo "ERROR: The ${FILEDATE}_${GOOGLE_GOOGLE_BIGQUERY_SQL} table counts are too low. Exiting" && exit 1
+    echo "ERROR: The ${FILEDATE}_${GOOGLE_BIGQUERY_SQL} table counts are too low. Exiting" && exit 1
   fi
 
 }
@@ -137,7 +159,7 @@ function transfer_s3() {
   # Transfer to S3
   if [[ "${MODE}" = "prod" && -n ${AWS_S3_BUCKET} ]]; then
 
-    gsutil -m rsync -d -r -x "TESTING_" gs://"${GOOGLE_STORAGE_BUCKET}"/"${GOOGLE_STORAGE_PATH}"/"${GOOGLE_GOOGLE_BIGQUERY_SQL}"/ s3://"${AWS_S3_BUCKET}"/
+    gsutil -m rsync -d -r -x "TESTING_" gs://"${GOOGLE_STORAGE_BUCKET}"/"${GOOGLE_STORAGE_PATH}"/"${GOOGLE_BIGQUERY_SQL}"/ s3://"${AWS_S3_BUCKET}"/
     echo "Ok: Completed S3 transfer"
 
   else
@@ -154,7 +176,7 @@ function archive_table() {
      # Make sure we dont copy test tables
      for i in $(bq ls -n 9999 "${GOOGLE_CLOUDSDK_CORE_PROJECT}" | grep "testing_*" | awk '{print $1}'); do bq rm -ft "${GOOGLE_CLOUDSDK_CORE_PROJECT}"."${i}"; done
      # Transfer to archive dataset
-     bq cp "${GOOGLE_CLOUDSDK_CORE_PROJECT}":"${GOOGLE_BIGQUERY_WD_DATASET}"."${FILEDATE}"_"${GOOGLE_GOOGLE_BIGQUERY_SQL}" "${GOOGLE_CLOUDSDK_CORE_PROJECT}":"${GOOGLE_BIGQUERY_ARCHIVE_DATASET}"."${FILEDATE}"_"${GOOGLE_GOOGLE_BIGQUERY_SQL}"_ARCHIVE
+     bq cp "${GOOGLE_CLOUDSDK_CORE_PROJECT}":"${GOOGLE_BIGQUERY_WD_DATASET}"."${FILEDATE}"_"${GOOGLE_BIGQUERY_SQL}" "${GOOGLE_CLOUDSDK_CORE_PROJECT}":"${GOOGLE_BIGQUERY_ARCHIVE_DATASET}"."${FILEDATE}"_"${GOOGLE_BIGQUERY_SQL}"_ARCHIVE
 
   else
      echo "Ok: No Table Archive. Running in TEST mode"
@@ -173,7 +195,7 @@ while [[ ${CUR} -le ${END} ]]; do
 
   setup_gs_storage
   setup_bq_tables
-  ga_check
+  table_check
   export_data
   if [[ -z ${AWS_S3_BUCKET} ]]; then echo "INFO: AWS_S3_BUCKET not set"; else transfer_s3; fi
   archive_table
