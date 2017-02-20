@@ -13,9 +13,9 @@ insertcron () {
     crontab -l
 }
 
-if test -n "${GOOGLE_CLOUDSDK_ACCOUNT}";then echo "${GOOGLE_CLOUDSDK_ACCOUNT}" >> /cron/auth.base64 base64 -d /cron/auth.base64 >> /cron/auth.json && gcloud auth activate-service-account --key-file=/cron/auth.json "${GOOGLE_CLOUDSDK_ACCOUNT_EMAIL}";else echo "INFO: GOOGLE_CLOUDSDK_ACCOUNT is not being used. Checking if GOOGLE_CLOUDSDK_ACCOUNT_FILE is present..."; fi
+if test -n "${GOOGLE_CLOUDSDK_ACCOUNT}"; then echo "${GOOGLE_CLOUDSDK_ACCOUNT}" >> /cron/auth.base64 base64 -d /cron/auth.base64 >> /cron/auth.json && gcloud auth activate-service-account --key-file=/cron/auth.json "${GOOGLE_CLOUDSDK_ACCOUNT_EMAIL}"; else echo "INFO: GOOGLE_CLOUDSDK_ACCOUNT is not being used. Checking if GOOGLE_CLOUDSDK_ACCOUNT_FILE is present..."; fi
 
-if test -n "${GOOGLE_CLOUDSDK_ACCOUNT_FILE}";then echo "OK: GOOGLE_CLOUDSDK_ACCOUNT_FILE is present. Authenticating with ${GOOGLE_CLOUDSDK_ACCOUNT_FILE}..." && gcloud auth activate-service-account --key-file="${GOOGLE_CLOUDSDK_ACCOUNT_FILE}" "${GOOGLE_CLOUDSDK_ACCOUNT_EMAIL}"; else echo "INFO: GOOGLE_CLOUDSDK_ACCOUNT_FILE not present. Assuming use of --volumes-from gcloud-config ..."; fi
+if test -n "${GOOGLE_CLOUDSDK_ACCOUNT_FILE}"; then echo "OK: GOOGLE_CLOUDSDK_ACCOUNT_FILE is present. Authenticating with ${GOOGLE_CLOUDSDK_ACCOUNT_FILE}..." && gcloud auth activate-service-account --key-file="${GOOGLE_CLOUDSDK_ACCOUNT_FILE}" "${GOOGLE_CLOUDSDK_ACCOUNT_EMAIL}"; else echo "INFO: GOOGLE_CLOUDSDK_ACCOUNT_FILE not present. Assuming use of --volumes-from gcloud-config ..."; fi
 
 if test -n "${GOOGLE_CLOUDSDK_CRON}"; then echo "OK: GOOGLE_CLOUDSDK_CRON is present. Setting up CROND..." && echo "${GOOGLE_CLOUDSDK_CRON}" >> /cron/cron.base64 && base64 -d /cron/cron.base64 >> /cron/crontab.conf && insertcron; else echo "INFO: There is no GOOGLE_CLOUDSDK_CRON that was passed. Checking for GOOGLE_CLOUDSDK_CRONFILE..."; fi
 

@@ -1,4 +1,4 @@
-![Google](https://github.com/openbridge/ob_google-cloud/blob/develop-temp/images/google.png)
+![Google](./images/google.png)
 
 # Google Cloud SDK +Plus
 
@@ -37,31 +37,65 @@ There are additional capabilities for querying, exporting and storing outputs fr
 
 This service was originally created to perform "cloud-to-cloud" operations, specifically BigQuery exports and syncing files to Amazon S3\. However, you can run any commands supported by the SDK via the container.
 
-# Get A Google Cloud Platform Account
+## Getting Started
 
 For a Google Cloud SDK +Plus container to work, it requires a Google Cloud account!
 
-## Step 1: Getting Started = Setup Google Account
+### Prerequisites
+
+ - Docker
+ - Google Cloud Account
+
+#### What is Docker?
+
+This container is used for virtualizing your Google development or work environment using Docker. If you don't know what Docker is read "[What is Docker?](https://www.docker.com/what-docker)".
+
+#### Get Docker
+
+Once you have a sense of what Docker is, you can then install the software. It is free: "[Get Docker](https://www.docker.com/products/docker)". Select the Docker package that aligns with your environment (ie. OS X, Linux or Windows). If you have not used Docker before, take a look at the guides:
+
+- [Engine: Get Started](* https://docs.docker.com/engine/getstarted/)
+- [Docker Mac](https://docs.docker.com/docker-for-mac/)
+- [Docker Windows](https://docs.docker.com/docker-for-windows/)
+
+If you already have a Linux instance running as a host or VM, you can install Docker command line. For example, on CentOS you would run `yum install docker -y` and then start the Docker service.
+
+
+#### Google Cloud Account
+
+##### Step 1: Setup Google Account
 
 This container assumes you already have a Google Cloud account setup. Do not have a Google Cloud account? Set one up [here](https://cloud.google.com/).
 
-## Step 2: Create Your Google Cloud Project
+##### Step 2: Create Your Google Cloud Project
 
 Now that you have a Google Cloud account the next step is setting up a project. If you are not sure how, check out the [documentation](https://developers.google.com/console/help/new/#creatingdeletingprojects). If you already have a project setup, take note of the ID.
 
-## Step 3: Activate Google Cloud APIs
+##### Step 3: Activate Google Cloud APIs
 
 With your project setup you will need to activate APIs on that project. The API's are how the Google Cloud SDK perform operations on your behalf.
 
 For details on how to do this, the Google [documentation](https://developers.google.com/console/help/new/#activating-and-deactivating-apis) describes the process for activating APIs.
 
-## Step 4: Google Cloud Authentication
+##### Step 4: Google Cloud Authentication
 
 The preferred methods of authentication is using a _Google Cloud OAuth Service Account_ docker volume or auth file. Without an account volume or auth file you will not get far. No account = no access.
 
 The Google Service Account Authentication [documentation](https://cloud.google.com/storage/docs/authentication?hl=en#service_accounts) details how to generate the file.
 
-### Setting Up A Docker Authentication Volume
+
+### Installing
+
+```
+docker build -t openbridge/google-cloud .
+```
+
+
+### Configuration
+
+-
+
+#### Setting Up A Docker Authentication Volume
 
 Follow these instructions if you are running docker _outside_ of Google Compute Engine:
 
@@ -321,11 +355,11 @@ However, you don't have to use this job wrapper. You can call the process direct
 docker run -it -v /Users/bob/Documents/github/ob_google-cloud/auth/prod.json:/auth.json -v /Users/bob/Documents/github/ob_google-cloud/sql:/sql --env-file /env/file.env openbridge/google-cloud bigquery-run prod 2017-01-01 2017-01-01
 ```
 
-# Running Your Container
+## Deployment
 
 We have already shown examples on how to run commands via the container. However, there may be cases where you want the container to be running 24/7 because you have configured `cron` tasks to execute at set intervals. The next section describes how to run your container as a daemon.
 
-## Run Google Cloud SDK As Daemon
+### Run Google Cloud SDK As Daemon
 
 This container can run gcloud operations using cron. The use of CROND is the default configuration in `docker-compose.yml`. It has the following set: `command: cron`. This informs the container to run the `crond` service in the background. With `crond` running anything set in `crontab` will get executed. A working example crontab can be found here: `/cron/crontab.conf`
 
@@ -347,7 +381,7 @@ GOOGLE_STORAGE_BUCKET={{GOOGLE_STORAGE_BUCKET}}
 45 12 * * * echo "RUN" > /tmp/runjob.txt
 ```
 
-### Example: Docker Compose
+#### Example: Docker Compose
 
 The simplest way to run the container is:
 
@@ -359,7 +393,7 @@ This assumes you have configured everything in `./env/gcloud-sample.env` and hav
 
 You can get fairly sophisticated with your compose configs. The included `docker-compose.yml` is a starting point. Take a look at the Docker Compose [documentation](https://docs.docker.com/compose/compose-file/) for a more indepth look at what is possible.
 
-# Example Commands
+## Example Commands
 
 This example includes AWS credentials:
 
@@ -415,7 +449,8 @@ Run by setting the name, start and end dates:
 /usr/bin/env bash -c 'bigquery-export ga360 foo-casing-539217 827858240 2016-10-21 2016-10-21'
 ```
 
-/usr/bin/env bash -c 'bigquery-export ga360master hasbro-casing-139217 127357242 2017-01-01 2017-01-01' Remove BQ dataset:
+/usr/bin/env bash -c 'bigquery-export ga360master hasbro-casing-139217 127357242 2017-01-01 2017-01-01'
+Remove BQ dataset:
 
 ```bash
 bq rm -r -f "${GOOGLE_BIGQUERY_WD_DATASET}"
@@ -470,18 +505,22 @@ GASESSIONSCHECK=$(bq ls -n 1000 "${GOOGLE_CLOUDSDK_CORE_PROJECT}":"${GOOGLE_BIGQ
 `
 ```
 
-# Build Details
+## Build Details
 
 The container is based on the following:<br>
 **Operating System:** Alpine `Latest:3.5`<br>
-**Google SDK Version:** `141.0.0`
+**Google SDK Version:** `144.0.0`
 
-# Issues
+## Issues
 
 If you have any problems with or questions about this image, please contact us through a GitHub issue.
 
-# Contributing
+## Contributing
 
 You are invited to contribute new features, fixes, or updates, large or small; we are always thrilled to receive pull requests, and do our best to process them as fast as we can.
 
 Before you start to code, we recommend discussing your plans through a GitHub issue, especially for more ambitious contributions. This gives other contributors a chance to point you in the right direction, give you feedback on your design, and help you find out if someone else is working on the same thing.
+
+## License
+
+This project is licensed under the MIT License - see the [LICENSE.md](LICENSE.md) file for details
