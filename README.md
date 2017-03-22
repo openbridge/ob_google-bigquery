@@ -1,4 +1,4 @@
-![Google](./images/google.png)
+![Google](./images/godzilla.png)
 
 # Google Cloud SDK +Plus
 
@@ -509,7 +509,7 @@ GASESSIONSCHECK=$(bq ls -n 1000 "${GOOGLE_CLOUDSDK_CORE_PROJECT}":"${GOOGLE_BIGQ
 
 The container is based on the following:<br>
 **Operating System:** Alpine `Latest:3.5`<br>
-**Google SDK Version:** `144.0.0`
+**Google SDK Version:** `146.0.0`
 
 ## Issues
 
@@ -523,4 +523,4 @@ Before you start to code, we recommend discussing your plans through a GitHub is
 
 ## License
 
-This project is licensed under the MIT License - see the [LICENSE.md](LICENSE.md) file for details
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details
