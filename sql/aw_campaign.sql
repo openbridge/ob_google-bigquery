@@ -1,4 +1,8 @@
-# The following sample query analyzes AdWords campaign performance for the past 30 days.
+/*
+The following sample query analyzes AdWords campaign performance for the past 30 days.
+
+Keyword_{{GOOGLE_ADWORDS_CUSTOMER_ID}}
+*/
 SELECT
   c.ExternalCustomerId,
   c.CampaignName,
@@ -7,9 +11,9 @@ SELECT
   SUM(cs.Interactions) AS Interactions,
   (SUM(cs.Cost) / 1000000) AS Cost
 FROM
-  `[DATASET].Campaign_[CUSTOMER_ID]` c
+  `{{GOOGLE_BIGQUERY_JOB_DATASET}}.{{GOOGLE_BIGQUERY_TABLE}}` c
 LEFT JOIN
-  `[DATASET].CampaignStats_[CUSTOMER_ID]` cs
+  `{{GOOGLE_BIGQUERY_JOB_DATASET}}.CampaignStats_{{GOOGLE_ADWORDS_CUSTOMER_ID}}` cs
 ON
   (c.CampaignId = cs.CampaignId
    AND cs._DATA_DATE BETWEEN

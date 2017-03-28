@@ -3,7 +3,7 @@ The following sample query analyzes the number of impressions, clicks, activitie
 START_DATE = DATE_ADD(CURRENT_DATE(), INTERVAL -31 DAY)
 END_DATE = DATE_ADD(CURRENT_DATE(), INTERVAL -1 DAY)
 
-The table name construct should look like this "NetworkImpressions{{GOOGLE_DOUBLECLICK_NETWORK_CODE}}"
+The table name construct should look like this "match_table_campaigns_{{GOOGLE_DOUBLECLICK_ID}}"
 */
 SELECT
   base.*,
@@ -21,7 +21,7 @@ FROM (
       Campaign,
       Campaign_ID
     FROM
-      `{{GOOGLE_BIGQUERY_JOB_DATASET}}.match_table_campaigns_{{GOOGLE_DOUBLECLICK_ID}}`
+      `{{GOOGLE_BIGQUERY_JOB_DATASET}}.{{GOOGLE_BIGQUERY_TABLE}}`
     WHERE
       DATA_DATE = _LATEST_DATE ),
     (

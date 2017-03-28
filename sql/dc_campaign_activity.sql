@@ -1,7 +1,9 @@
-# The following sample query analyzes campaign activity over the past 30 days. #In this query, replace [CAMPAIGN_LIST] with a comma separated list of all # the DoubleClick campaigns of interest within the scope of the query.
+/*
+The following sample query analyzes campaign activity over the past 30 days. #In this query, replace [CAMPAIGN_LIST] with a comma separated list of all # the DoubleClick campaigns of interest within the scope of the query.
 
-# START_DATE = DATE_ADD(CURRENT_DATE(), INTERVAL -31 DAY)
-# END_DATE = DATE_ADD(CURRENT_DATE(), INTERVAL -1 DAY)
+The table name construct should look like this "match_table_campaigns_{{GOOGLE_DOUBLECLICK_ID}}"
+
+*/
 SELECT
   base.*,
   activity.count AS activity_count,
@@ -14,7 +16,7 @@ FROM (
       Campaign,
       Campaign_ID
     FROM
-      `[DATASET].match_table_campaigns_{{GOOGLE_DOUBLECLICK_ID}}`
+      `{{GOOGLE_BIGQUERY_JOB_DATASET}}.{{GOOGLE_BIGQUERY_TABLE}}`
     WHERE
       DATA_DATE = LATEST_DATE ),
     (

@@ -21,7 +21,7 @@ END=$(date -d${DEND} +%s)
 CUR=${START}
 
 # Check if CRON is being used. We set a "lock" file for run times
-    if [[ -n "${GOOGLE_CLOUDSDK_CRONFILE}" ]]; then
+    if [[ -f "/cron/${GOOGLE_CLOUDSDK_CRONFILE}" ]]; then
         # Check if the process should run or not.
         if [[ -f "/tmp/runjob.txt" ]]; then
             echo "OK: Time to run export process..."
@@ -29,11 +29,11 @@ CUR=${START}
             echo "INFO: No export job is present. Exit" && exit 1
         fi
     else
-        echo "OK: Cron is not present"
+        echo "OK: Cron is not present. Running outside of cron..."
     fi
 
     # Check is the passed SQL is present.
-    if [[ -f "/sql/${GOOGLE_BIGQUERY_SQL}.sql" ]]; then
+    if [[ -f "/tmp/sql/${GOOGLE_BIGQUERY_SQL}.sql" ]]; then
         echo "OK: The ${GOOGLE_BIGQUERY_SQL} is present. Ready to run..."
     else
         echo "ERROR: The is no ${GOOGLE_BIGQUERY_SQL} present. Can not run without ${GOOGLE_BIGQUERY_SQL} being present. Please check your configs." && exit 1
@@ -68,7 +68,7 @@ function setup_gs_storage() {
 
     else
 
-        if ! gsutil ls gs:// | grep -q "gs://${GOOGLE_STORAGE_BUCKET}/"; then
+        if ! gsutil ls gs:// | grep -e "gs://${GOOGLE_STORAGE_BUCKET}/"; then
             echo "OK: Creating bucket ${GOOGLE_STORAGE_BUCKET}"
             gsutil mb -p "${GOOGLE_CLOUDSDK_CORE_PROJECT}" -l us gs://"${GOOGLE_STORAGE_BUCKET}"
             gsutil lifecycle set /lifecycle.json gs://"${GOOGLE_STORAGE_BUCKET}"/
@@ -88,7 +88,7 @@ function setup_bq_tables() {
     GOOGLE_BIGQUERY_WD_DATASET="${GOOGLE_BIGQUERY_JOB_DATASET}_${GOOGLE_BIGQUERY_SQL}_wd"
     GOOGLE_BIGQUERY_ARCHIVE_DATASET="${GOOGLE_BIGQUERY_JOB_DATASET}_${GOOGLE_BIGQUERY_SQL}_archive"
 
-    if ! bq ls -d | grep -q "${GOOGLE_BIGQUERY_JOB_DATASET}_${GOOGLE_BIGQUERY_SQL}_wd"; then
+    if ! bq ls -d | grep -e "${GOOGLE_BIGQUERY_JOB_DATASET}_${GOOGLE_BIGQUERY_SQL}_wd"; then
 
         echo "OK: ${GOOGLE_BIGQUERY_JOB_DATASET}_wd does not exist. Creating..."
         bq mk --default_table_expiration 3600 "${GOOGLE_BIGQUERY_WD_DATASET}"
@@ -97,7 +97,7 @@ function setup_bq_tables() {
         echo "INFO: ${GOOGLE_BIGQUERY_JOB_DATASET}_${GOOGLE_BIGQUERY_SQL}_wd dataset already exists"
     fi
 
-    if ! bq ls -d | grep -q "${GOOGLE_BIGQUERY_JOB_DATASET}_${GOOGLE_BIGQUERY_SQL}_archive"; then
+    if ! bq ls -d | grep -e "${GOOGLE_BIGQUERY_JOB_DATASET}_${GOOGLE_BIGQUERY_SQL}_archive"; then
 
         echo "OK: ${GOOGLE_BIGQUERY_JOB_DATASET}_${GOOGLE_BIGQUERY_SQL}_archive does not exist. Creating..."
         bq mk --default_table_expiration 2678400 "${GOOGLE_BIGQUERY_ARCHIVE_DATASET}"
@@ -107,7 +107,7 @@ function setup_bq_tables() {
     fi
 
     #Import the query and set the required BQ variables
-    BQQUERY=$(cat /sql/${GOOGLE_BIGQUERY_SQL}.sql | sed "s/{{QDATE}}/${QDATE}/g; s/{{GOOGLE_BIGQUERY_TABLE}}/${GOOGLE_BIGQUERY_TABLE}/g; s/{{GOOGLE_CLOUDSDK_CORE_PROJECT}}/${GOOGLE_CLOUDSDK_CORE_PROJECT}/g; s/{{GOOGLE_BIGQUERY_JOB_DATASET}}/${GOOGLE_BIGQUERY_JOB_DATASET}/g; s/{{GOOGLE_DOUBLECLICK_NETWORK_CODE}}/${GOOGLE_DOUBLECLICK_NETWORK_CODE}/g; s/{{GOOGLE_DOUBLECLICK_ID}}/${GOOGLE_DOUBLECLICK_ID}/g" )
+    BQQUERY=$(cat /tmp/sql/${GOOGLE_BIGQUERY_SQL}.sql | sed "s/{{QDATE}}/${QDATE}/g; s/{{GOOGLE_BIGQUERY_TABLE}}/${GOOGLE_BIGQUERY_TABLE}/g; s/{{GOOGLE_CLOUDSDK_CORE_PROJECT}}/${GOOGLE_CLOUDSDK_CORE_PROJECT}/g; s/{{GOOGLE_BIGQUERY_JOB_DATASET}}/${GOOGLE_BIGQUERY_JOB_DATASET}/g; s/{{GOOGLE_DOUBLECLICK_NETWORK_CODE}}/${GOOGLE_DOUBLECLICK_NETWORK_CODE}/g; s/{{GOOGLE_DOUBLECLICK_ID}}/${GOOGLE_DOUBLECLICK_ID}/g" )
 
 }
 
@@ -157,11 +157,11 @@ function transfer_s3() {
     if [[ "${MODE}" = "prod" && -n ${AWS_S3_BUCKET} ]]; then
 
         # Transfer but exclude any possible test data
-        gsutil -m rsync -d -r -x "testing_" gs://"${GOOGLE_STORAGE_BUCKET}"/"${GOOGLE_STORAGE_PATH}"/"${GOOGLE_BIGQUERY_SQL}"/ s3://"${AWS_S3_BUCKET}"/
-        echo "Ok: Completed S3 transfer"
+        gsutil -m rsync -d -r -x "testing_" gs://"${GOOGLE_STORAGE_BUCKET}"/"${GOOGLE_STORAGE_PATH}"/"${GOOGLE_BIGQUERY_SQL}"/ s3://"${AWS_S3_BUCKET}"/"${AWS_S3_PATH}"/
+        echo "OK: Completed S3 transfer"
 
     else
-        echo "Ok: No S3 Transfer. Running in TEST mode"
+        echo "OK: No S3 Transfer. Running in TEST mode"
     fi
 
 }
@@ -177,7 +177,7 @@ function archive_table() {
         bq cp "${GOOGLE_CLOUDSDK_CORE_PROJECT}":"${GOOGLE_BIGQUERY_WD_DATASET}"."${FILEDATE}"_"${GOOGLE_BIGQUERY_SQL}" "${GOOGLE_CLOUDSDK_CORE_PROJECT}":"${GOOGLE_BIGQUERY_ARCHIVE_DATASET}"."${FILEDATE}"_"${GOOGLE_BIGQUERY_SQL}"_archive
 
     else
-        echo "Ok: No Table Archive. Running in TEST mode"
+        echo "OK: No Table Archive. Running in TEST mode"
     fi
 
 }
@@ -202,6 +202,6 @@ function archive_table() {
 } 200>/tmp/query.lock
 
 # Everything worked. Cleanup and reset the process
-echo "OK: Job is complete" && rm -f /tmp/*
+echo "OK: Job is complete" && rm -Rf /tmp/*
 
 exit 0
