@@ -31,7 +31,7 @@
 
 # Overview
 
-This service is meant to simplify running Google Cloud operations. This means you do not have to worry about installation, configuration or ongoing maintenance related to an SDK environment. This can be helpful to those who would prefer to not to be responsible for those activities.
+This service is meant to simplify running Google Cloud operations, especially BigQuery operations. This means you do not have to worry about installation, configuration or ongoing maintenance related to an SDK environment. This can be helpful to those who would prefer to not to be responsible for those activities.
 
 There are additional capabilities for querying, exporting and storing outputs from BigQuery too.
 
@@ -54,7 +54,7 @@ This container is used for virtualizing your Google development or work environm
 
 Once you have a sense of what Docker is, you can then install the software. It is free: "[Get Docker](https://www.docker.com/products/docker)". Select the Docker package that aligns with your environment (ie. OS X, Linux or Windows). If you have not used Docker before, take a look at the guides:
 
-- [Engine: Get Started](* https://docs.docker.com/engine/getstarted/)
+- [Engine: Get Started](https://docs.docker.com/engine/getstarted/)
 - [Docker Mac](https://docs.docker.com/docker-for-mac/)
 - [Docker Windows](https://docs.docker.com/docker-for-windows/)
 
@@ -93,8 +93,6 @@ docker build -t openbridge/google-cloud .
 
 ### Configuration
 
--
-
 #### Setting Up A Docker Authentication Volume
 
 Follow these instructions if you are running docker _outside_ of Google Compute Engine:
@@ -120,7 +118,7 @@ docker run --rm -ti --volumes-from gcloud-config openbridge/google-cloud gcloud 
 docker run --rm -ti --volumes-from gcloud-config openbridge/google-cloud gsutil ls
 ```
 
-If you are using this image from _within_ [Google Compute Engine](https://cloud.google.com/compute/). If you enable a Service Account with the necessary scopes, there is no need to auth or use a config volume:
+If you are using this image from _within_ [Google Compute Engine](https://cloud.google.com/compute/). If you enable a Service Account with the necessary scopes, there is no need to auth or use a config volume, Just run your commands:
 
 ```bash
 docker run --rm -ti openbridge/google-cloud gcloud info
@@ -509,7 +507,7 @@ GASESSIONSCHECK=$(bq ls -n 1000 "${GOOGLE_CLOUDSDK_CORE_PROJECT}":"${GOOGLE_BIGQ
 
 The container is based on the following:<br>
 **Operating System:** Alpine `Latest:3.5`<br>
-**Google SDK Version:** `146.0.0`
+**Google SDK Version:** `151.0.0`
 
 ## Issues
 

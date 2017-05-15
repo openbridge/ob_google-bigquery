@@ -14,9 +14,9 @@ function mode() {
 
 function process() {
 
-  for i in ./env/*.env; do
+  for i in ./env/prod/*.env; do
     echo "working on $i"
-    bash -c "docker run -it -v /Users/thomas/Documents/github/ob_google-cloud/auth/prod.json:/auth.json -v /Users/thomas/Documents/github/ob_google-cloud/sql:/sql --env-file ${i} ${dockerimage} bigquery-run ${MODE} ${START} ${END}"
+    bash -c "docker run -it -v /Users/thomas/Documents/github/ob_google-cloud/auth/prod/prod.json:/auth.json -v /Users/thomas/Documents/github/ob_google-cloud/sql:/sql --env-file ${i} ${dockerimage} bigquery-run ${MODE} ${START} ${END}"
     if [[ $? = 0 ]]; then echo "OK: "; else echo "ERROR: "; fi
   done
 }

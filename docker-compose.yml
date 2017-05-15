@@ -2,10 +2,10 @@ google-cloud-sdk:
   image: openbridge/google-cloud
   volumes:
     - ./cron/crontab.conf:/crontab.conf
-    - ./auth/prod.json:/auth.json
+    - ./auth/prod/prod.json:/auth.json
   container_name: google-cloud-sdk
   env_file:
-    - ./env/prod.env
+    - ./env/import/test.env
   restart: always
   command: cron
   tty: true
