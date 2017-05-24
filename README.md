@@ -51,7 +51,18 @@
 
 This service is meant to simplify running Google Cloud operations, especially BigQuery tasks. This means you do not have to worry about installation, configuration or ongoing maintenance related to an SDK environment. This can be helpful to those who would prefer to not to be responsible for those activities.
 
-There are additional capabilities for querying, exporting and storing outputs from BigQuery too.
+* BigQuery Data Export
+* BigQuery Data Import (WIP)
+* Setup Export and Import Job via config files
+* Batch exports
+* Flexible SQL Definition and Runtime
+* Service Account Authorization (via auth file or volumes)
+* Run As SDK as Daemon (via Cron)
+* Google Service Configuration (Create BigQuery datasets, temp tables, archives, Google storage locations....)
+* Data retention lifecycle policy (Google Storage)
+* Data transfer to Amazon S3
+* SQL Recipes (DoubleClick, AdWords, GA...)
+* Package in a Docker image
 
 This service was originally created to perform "cloud-to-cloud" operations, specifically BigQuery exports and syncing files to Amazon S3. However, you can run any commands supported by the SDK via the container.
 
