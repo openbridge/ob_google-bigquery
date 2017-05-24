@@ -1,9 +1,9 @@
 {
   "type": "service_account",
-  "project_id": "foo-casing-139217",
+  "project_id": "foo-baseme-139217",
   "private_key_id": "",
   "private_key": "",
-  "client_email": "foo-casing-139217@appspot.gserviceaccount.com",
+  "client_email": "foo-baseme-139217@appspot.gserviceaccount.com",
   "client_id": "122211111111",
   "auth_uri": "https://accounts.google.com/o/oauth2/auth",
   "token_uri": "https://accounts.google.com/o/oauth2/token",

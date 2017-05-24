@@ -1,0 +1,9 @@
+/*
+The table name construct should look like this "impression{{GOOGLE_DOUBLECLICK_ID}}"
+*/
+# START_DATE = DATE_ADD(CURRENT_DATE(), INTERVAL -31 DAY)
+# END_DATE = DATE_ADD(CURRENT_DATE(), INTERVAL -1 DAY)
+SELECT Campaign_ID, DATA_DATE AS Date, count(*) AS count, count(distinct User_ID) AS du
+FROM `{{GOOGLE_CLOUDSDK_CORE_PROJECT}}:{{GOOGLE_BIGQUERY_JOB_DATASET}}.{{GOOGLE_BIGQUERY_TABLE}}` WHERE
+  _DATA_DATE BETWEEN '{{QDATE}}' AND '{{QDATE}}'
+GROUP BY Campaign_ID, Date

@@ -1,0 +1,154 @@
+#!/usr/bin/env bash
+
+set -ex
+
+exec 200< $0
+if ! flock -n 200; then echo "OK: There can be only one query process happening at once. Exit" && exit 1; fi
+
+args=("$@")
+
+# Google Settings
+if [[ -z ${args[1]} ]]; then echo "OK: BIGQUERY SQL was not passed. Using container default"; else GOOGLE_BIGQUERY_SQL=${1}; fi
+if [[ -z ${args[2]} ]]; then echo "OK: CLOUDSDK PROJECT was not passed. Using container default"; else GOOGLE_CLOUDSDK_CORE_PROJECT=${2}; fi
+if [[ -z ${args[3]} ]]; then echo "OK: BIGQUERY DATASET was not passed. Using container default"; else GOOGLE_BIGQUERY_JOB_DATASET=${3}; fi
+
+# Set the dates
+DATE=$(date +"%Y%m%d") && echo "Runnning on $DATE..."
+DSTART=${4}
+DEND=${5}
+START=$(date -d${DSTART} +%s)
+END=$(date -d${DEND} +%s)
+CUR=${START}
+
+# Check if CRON is being used. We set a "lock" file for run times
+    if [[ -f "/cron/${GOOGLE_CLOUDSDK_CRONFILE}" ]]; then
+        # Check if the process should run or not.
+        if [[ -f "/tmp/runjob.txt" ]]; then
+            echo "OK: Time to run export process..."
+        else
+            echo "INFO: No export job is present. Exit" && exit 1
+        fi
+    else
+        echo "OK: Cron is not present. Running outside of cron..."
+    fi
+
+    # Check is the passed SQL is present.
+    if [[ -f "/tmp/sql/${GOOGLE_BIGQUERY_SQL}.sql" ]]; then
+        echo "OK: The ${GOOGLE_BIGQUERY_SQL} is present. Ready to run..."
+    else
+        echo "ERROR: The is no ${GOOGLE_BIGQUERY_SQL} present. Can not run without ${GOOGLE_BIGQUERY_SQL} being present. Please check your configs." && exit 1
+    fi
+
+function setup_gs_storage() {
+
+    # Set the table and file name to the date of the data being extracted
+    # We use a "prodcution" and "test" context
+
+    FID=$(cat /dev/urandom | tr -cd [:alnum:] | head -c 8)
+
+    if [[ -z ${GOOGLE_STORAGE_PATH} ]]; then
+
+        if [[ "${MODE}" = "prod" ]]; then
+            FILEDATE="${FDATE}"_"${FID}" && GOOGLE_STORAGE_PATH="production"
+        else
+            FILEDATE="testing_${FDATE}_${FID}" && GOOGLE_STORAGE_PATH="testing"
+        fi
+
+    else
+        echo "OK: GOOGLE_STORAGE_PATH is set to ${GOOGLE_STORAGE_PATH}"
+        FILEDATE="${FDATE}"_"${FID}"
+    fi
+
+    # Setup the working bucket to be used for exports
+    # Check if the bucket exists.
+
+    if [[ -n "${GOOGLE_CLOUDSDK_ACCOUNT_FILE}" ]]; then
+
+        echo "INFO: gs:// check skipped due to a Google auth bug"
+
+    else
+
+        if ! gsutil ls gs:// | grep -e "gs://${GOOGLE_STORAGE_BUCKET}/"; then
+            echo "OK: Creating bucket ${GOOGLE_STORAGE_BUCKET}"
+            gsutil mb -p "${GOOGLE_CLOUDSDK_CORE_PROJECT}" -l us gs://"${GOOGLE_STORAGE_BUCKET}"
+            gsutil lifecycle set /lifecycle.json gs://"${GOOGLE_STORAGE_BUCKET}"/
+        else
+            echo "INFO: ${GOOGLE_STORAGE_BUCKET} bucket already exists"
+        fi
+
+    fi
+
+}
+
+function transfer_s3() {
+
+    # Transfer to S3
+    if [[ "${MODE}" = "prod" && -n ${AWS_S3_BUCKET} ]]; then
+
+        # Transfer but exclude any possible test data
+        gsutil -m rsync -d -r -x "testing_" s3://"${AWS_S3_BUCKET}"/"${AWS_S3_PATH}"/ gs://"${GOOGLE_STORAGE_BUCKET}"/"${GOOGLE_STORAGE_PATH}"/
+
+        # Create a copy of the file for backup purposes
+        gsutil -m rsync -d -r -x "testing_" gs://"${GOOGLE_STORAGE_BUCKET}"/"${GOOGLE_STORAGE_PATH}"/ gs://"${GOOGLE_STORAGE_BUCKET}"/backup/"${GOOGLE_STORAGE_PATH}"/$DATE/
+
+        echo "OK: Completed S3 transfer"
+
+    else
+        echo "OK: No S3 Transfer. Running in TEST mode"
+    fi
+
+}
+
+
+function load_data() {
+
+    for x in $(gsutil ls gs://${GOOGLE_STORAGE_BUCKET}/${GOOGLE_STORAGE_PATH}/)
+    do
+    # Create BigQuery table
+    bq load --autodetect --skip_leading_rows=${GOOGLE_BIGQUERY_SKIP_ROWS} --encoding=UTF-8 --field_delimiter=${GOOGLE_BIGQUERY_DELIMITER} $GOOGLE_BIGQUERY_JOB_DATASET.$GOOGLE_BIGQUERY_TABLE ${x}
+
+    # Create schema for table
+    #bq show --format=prettyjson bigquery-public-data:samples.wikipedia | jq '.schema.fields'
+    # Create empty table
+    #bq mk --schema ./mytable.json -t mydataset.newtable
+    # Check if the process imported the data
+    for i in $(bq ls -n 9999 "${GOOGLE_CLOUDSDK_CORE_PROJECT}":"${GOOGLE_BIGQUERY_JOB_DATASET}" | grep "${GOOGLE_BIGQUERY_TABLE}" | awk '{print $1}'); do if test "${i}" = "${GOOGLE_BIGQUERY_TABLE}"; then BQTABLECHECK="0"; else BQTABLECHECK="1"; fi done
+
+    # We will perform a spot check to make sure that the table does in fact has data present
+    if test "${BQTABLECHECK}" = "0"; then
+
+        echo "OK: ${GOOGLE_BIGQUERY_TABLE} table exists. Checking record counts..."
+
+        while read -r num; do echo "${num}" && if [[ $num =~ \"num\":\"([[:digit:]]+)\" ]] && (( BASH_REMATCH[1] > 1000 )); then echo "Ok: ${GOOGLE_BIGQUERY_TABLE} table count test meet expectations. Data is loaded and cleanup can begin..."
+
+        # Remove the file we just loaded
+        gsutil rm ${x}; fi done < <(echo "SELECT COUNT(*) as num FROM [${GOOGLE_CLOUDSDK_CORE_PROJECT}:${GOOGLE_BIGQUERY_JOB_DATASET}.${GOOGLE_BIGQUERY_TABLE}] HAVING COUNT(*) > 100000" | bq query --format json)
+
+        else
+            echo "ERROR: The ${GOOGLE_BIGQUERY_TABLE} table counts are too low. Exiting" && exit 1
+        fi
+
+   done
+
+}
+
+{
+    flock -s 200
+    while [[ ${CUR} -le ${END} ]]; do
+
+        #Set date to proper BQ query format for SQL
+        QDATE=$(date -d@${CUR} +%Y-%m-%d)
+        FDATE=$(date -d@${CUR} +%Y%m%d)
+        let CUR+=24*60*60
+
+        setup_gs_storage
+        if [[ -z ${AWS_S3_BUCKET} ]]; then echo "INFO: AWS_S3_BUCKET not set"; else transfer_s3; fi
+      #  load_data
+
+    done
+} 200>/tmp/query.lock
+
+# Everything worked. Cleanup and reset the process
+echo "OK: Job is complete" && rm -Rf /tmp/*
+
+exit 0
