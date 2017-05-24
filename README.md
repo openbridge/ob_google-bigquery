@@ -162,7 +162,7 @@ For example, if you name your auth file `creds.json` you would set the config to
 To use your authentication file, you need to mount it within the container in the same location specified in your `.env` file via `-v` variable:
 
 ```bash
-docker run -it -v /Users/bob/github/ob_google-bigquery/auth/prod.json:/creds.json --env-file ./env/prod.env openbridge/ob_google-cloud gcloud info
+docker run -it -v /Users/bob/github/ob_google-bigquery/auth/prod.json:/creds.json --env-file ./env/prod.env openbridge/ob_google-bigquery gcloud info
 ```
 
 # BigQuery Exports
@@ -483,7 +483,7 @@ docker run -it --rm --env-file ./env/prod.env -v /Users/bob/github/ob_google-big
 ```
 
 ```bash
-docker run -it --rm --env-file ./env/prod.env -v /Users/bob/github/ob_google-bigquery/auth/prod.json:/auth.json -v /Users/bob/github/ob_google-cloud-sdk/cron/crontab.conf:/crontab.conf gcloud bq ls -n 1000 dougie-buzz-133217:227999242
+docker run -it --rm --env-file ./env/prod.env -v /Users/bob/github/ob_google-bigquery/auth/prod.json:/auth.json -v /Users/bob/github/ob_google-bigquery/cron/crontab.conf:/crontab.conf gcloud bq ls -n 1000 dougie-buzz-133217:227999242
 ```
 
 Run by setting the name, start and end dates:
