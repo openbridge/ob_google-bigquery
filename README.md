@@ -151,7 +151,7 @@ For example, if you name your auth file `creds.json` you would set the config to
 To use your authentication file, you need to mount it within the container in the same location specified in your `.env` file via `-v` variable:
 
 ```bash
-docker run -it -v /Users/thomasspicer/github/ob_google-cloud/auth/prod.json:/creds.json --env-file ./env/prod.env openbridge/ob_google-cloud gcloud info
+docker run -it -v /Users/bob/github/ob_google-bigquery/auth/prod.json:/creds.json --env-file ./env/prod.env openbridge/ob_google-cloud gcloud info
 ```
 
 # BigQuery Exports
@@ -359,7 +359,7 @@ If you wanted to set this up as a recurring operation, you can create cron task:
 However, you don't have to use this job wrapper. You can call the process directly via Docker:
 
 ```bash
-docker run -it -v /Users/bob/Documents/github/ob_google-cloud/auth/prod.json:/auth.json -v /Users/bob/Documents/github/ob_google-cloud/sql:/sql --env-file /env/file.env openbridge/google-bigquery bigquery-run prod 2017-01-01 2017-01-01
+docker run -it -v /Users/bob/Documents/github/ob_google-bigquery/auth/prod.json:/auth.json -v /Users/bob/Documents/github/ob_google-bigquery/sql:/sql --env-file /env/file.env openbridge/google-bigquery bigquery-run prod 2017-01-01 2017-01-01
 ```
 
 # CRON
@@ -468,11 +468,11 @@ docker run -it --rm \
 To see a list of available `gcloud` commands:
 
 ```bash
-docker run -it --rm --env-file ./env/prod.env -v /Users/bob/github/ob_google-cloud/auth/prod.json:/auth.json openbridge/google-bigquery gcloud -h
+docker run -it --rm --env-file ./env/prod.env -v /Users/bob/github/ob_google-bigquery/auth/prod.json:/auth.json openbridge/google-bigquery gcloud -h
 ```
 
 ```bash
-docker run -it --rm --env-file ./env/prod.env -v /Users/bob/github/ob_google-cloud-sdk/auth/prod.json:/auth.json -v /Users/bob/github/ob_google-cloud-sdk/cron/crontab.conf:/crontab.conf gcloud bq ls -n 1000 dougie-buzz-133217:227999242
+docker run -it --rm --env-file ./env/prod.env -v /Users/bob/github/ob_google-bigquery/auth/prod.json:/auth.json -v /Users/bob/github/ob_google-cloud-sdk/cron/crontab.conf:/crontab.conf gcloud bq ls -n 1000 dougie-buzz-133217:227999242
 ```
 
 Run by setting the name, start and end dates:
