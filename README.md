@@ -114,9 +114,12 @@ The Google Service Account Authentication [documentation](https://cloud.google.c
 # Installing
 
 ```
-docker build -t openbridge/google-bigquery .
+docker build -t openbridge/ob_google-bigquery .
 ```
-
+or via Docker Hun simply pull the image locally
+```
+docker pull openbridge/ob_google-bigquery
+```
 
 # Configuration
 
@@ -125,13 +128,13 @@ docker build -t openbridge/google-bigquery .
 Follow these instructions if you are running docker _outside_ of Google Compute Engine:
 
 ```bash
-docker run -t -i --name gcloud-config openbridge/google-bigquery gcloud init
+docker run -t -i --name gcloud-config openbridge/ob_google-bigquery gcloud init
 ```
 
 If you would like to use service account the run command would look like this:
 
 ```bash
-docker run -t -i --name gcloud-config openbridge/google-bigquery gcloud auth activate-service-account <your-service-account-email> --key-file /tmp/your-key.p12 --project <your-project-id>
+docker run -t -i --name gcloud-config openbridge/ob_google-bigquery gcloud auth activate-service-account <your-service-account-email> --key-file /tmp/your-key.p12 --project <your-project-id>
 ```
 
 Notice the email, key and project variables are needed to run it this way.
@@ -141,15 +144,15 @@ Notice the email, key and project variables are needed to run it this way.
 Re-use the credentials from gcloud-config volumes & run sdk commands:
 
 ```bash
-docker run --rm -ti --volumes-from gcloud-config openbridge/google-bigquery gcloud info
-docker run --rm -ti --volumes-from gcloud-config openbridge/google-bigquery gsutil ls
+docker run --rm -ti --volumes-from gcloud-config openbridge/ob_google-bigquery gcloud info
+docker run --rm -ti --volumes-from gcloud-config openbridge/ob_google-bigquery gsutil ls
 ```
 
 If you are using this image from _within_ [Google Compute Engine](https://cloud.google.com/compute/). If you enable a Service Account with the necessary scopes, there is no need to auth or use a config volume, Just run your commands:
 
 ```bash
-docker run --rm -ti openbridge/google-bigquery gcloud info
-docker run --rm -ti openbridge/google-bigquery gsutil ls
+docker run --rm -ti openbridge/ob_google-bigquery gcloud info
+docker run --rm -ti openbridge/ob_google-bigquery gsutil ls
 ```
 
 ## Setting Up A Local Authentication File
@@ -373,7 +376,7 @@ If you wanted to set this up as a recurring operation, you can create cron task:
 However, you don't have to use this job wrapper. You can call the process directly via Docker:
 
 ```bash
-docker run -it -v /Users/bob/Documents/github/ob_google-bigquery/auth/prod.json:/auth.json -v /Users/bob/Documents/github/ob_google-bigquery/sql:/sql --env-file /env/file.env openbridge/google-bigquery bigquery-run prod 2017-01-01 2017-01-01
+docker run -it -v /Users/bob/Documents/github/ob_google-bigquery/auth/prod.json:/auth.json -v /Users/bob/Documents/github/ob_google-bigquery/sql:/sql --env-file /env/file.env openbridge/ob_google-bigquery bigquery-run prod 2017-01-01 2017-01-01
 ```
 
 # CRON
@@ -464,7 +467,7 @@ docker run -it --rm \
     -e "AWS_SECRET_ACCESS_KEY=ASASAKEWPOIEWOPIEPOWEIPWE" \
     -e "AWS_S3_BUCKET=foo/ebs/buzz/foo/google/google_analytics/ga-table" \
     -e "LOG_FILE=/ebs/logs/gcloud.log" \
-    openbridge/google-bigquery \
+    openbridge/ob_google-bigquery \
     gsutil rsync -d -r gs://{{GOOGLE_STORAGE_BUCKET}}/ s3://{{AWS_S3_BUCKET}}/
 ```
 
@@ -475,14 +478,14 @@ docker run -it --rm \
     -e "GOOGLE_CLOUDSDK_ACCOUNT_FILE=/auth.json" \
     -e "GOOGLE_CLOUDSDK_ACCOUNT_EMAIL=GOOGLE_CLOUDSDK_ACCOUNT_EMAIL=foo@appspot.gserviceaccount.com" \
     -e "GOOGLE_CLOUDSDK_CORE_PROJECT=foo-buzz-139217" \
-    openbridge/google-bigquery \
+    openbridge/ob_google-bigquery \
     gcloud compute instances list
 ```
 
 To see a list of available `gcloud` commands:
 
 ```bash
-docker run -it --rm --env-file ./env/prod.env -v /Users/bob/github/ob_google-bigquery/auth/prod.json:/auth.json openbridge/google-bigquery gcloud -h
+docker run -it --rm --env-file ./env/prod.env -v /Users/bob/github/ob_google-bigquery/auth/prod.json:/auth.json openbridge/ob_google-bigquery gcloud -h
 ```
 
 ```bash
@@ -508,19 +511,19 @@ bq rm -r -f "${GOOGLE_BIGQUERY_WD_DATASET}"
 Remove gzip files from Cloud Storage
 
 ```bash
-docker run --rm -ti --volumes-from gcloud-config openbridge/google-bigquery gsutil rm gs://"${GOOGLE_STORAGE_BUCKET}"/"${GOOGLE_STORAGE_PATH}"/"${GOOGLE_BIGQUERY_SQL}"/"${FILEDATE}"_"${GOOGLE_BIGQUERY_SQL}"_*.gz
+docker run --rm -ti --volumes-from gcloud-config openbridge/ob_google-bigquery gsutil rm gs://"${GOOGLE_STORAGE_BUCKET}"/"${GOOGLE_STORAGE_PATH}"/"${GOOGLE_BIGQUERY_SQL}"/"${FILEDATE}"_"${GOOGLE_BIGQUERY_SQL}"_*.gz
 ```
 
 Remove all files from Cloud Storage
 
 ```bash
-docker run --rm -ti --volumes-from gcloud-config openbridge/google-bigquery gsutil -m rm -f -r gs://"${GOOGLE_STORAGE_BUCKET}"/**
+docker run --rm -ti --volumes-from gcloud-config openbridge/ob_google-bigquery gsutil -m rm -f -r gs://"${GOOGLE_STORAGE_BUCKET}"/**
 ```
 
 Remove remove tables that match a pattern from BQ
 
 ```bash
-docker run --rm -ti --volumes-from gcloud-config openbridge/google-bigquery bash
+docker run --rm -ti --volumes-from gcloud-config openbridge/ob_google-bigquery bash
 ```
 
 The at the command prompt:
@@ -532,7 +535,7 @@ for i in $(bq ls -n 9999 ${GOOGLE_CLOUDSDK_CORE_PROJECT} | grep "<pattern>" | aw
 Generate list of tables from BQ. Check if any tables exist that match a pattern. If yes, 0=yes a match and 1=no match
 
 ```bash
-docker run --rm -ti --volumes-from gcloud-config openbridge/google-bigquery bash
+docker run --rm -ti --volumes-from gcloud-config openbridge/ob_google-bigquery bash
 ```
 
 Then at the command prompt:
@@ -544,7 +547,7 @@ BQTABLECHECK=$(bq ls -n 1000 "${GOOGLE_CLOUDSDK_CORE_PROJECT}":"${GOOGLE_BIGQUER
 Generate list of tables from BQ. Check if any tables exist that match a date pattern pattern. If yes, 0=yes a match and 1=no match
 
 ```bash
-docker run --rm -ti --volumes-from gcloud-config openbridge/google-bigquery bash
+docker run --rm -ti --volumes-from gcloud-config openbridge/ob_google-bigquery bash
 ```
 
 Then at the command prompt:
