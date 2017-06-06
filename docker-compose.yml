@@ -1,9 +1,9 @@
 google-cloud-sdk:
-  image: openbridge/google-bigquery
+  image: openbridge/ob_google-bigquery
   volumes:
     - ./cron/crontab.conf:/crontab.conf
     - ./auth/prod/prod.json:/auth.json
-  container_name: bigquery
+  container_name: google-bigquery
   env_file:
     - ./env/import/test.env
   command: cron

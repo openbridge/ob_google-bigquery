@@ -2,8 +2,6 @@
 
 # Google BigQuery+
 
-<!-- TOC depthFrom:1 depthTo:6 withLinks:1 updateOnSave:1 orderedList:0 -->
-
 - [Google BigQuery+](#google-bigquery)
 - [Overview](#overview)
 - [Getting Started](#getting-started)
@@ -45,7 +43,7 @@
 - [Contributing](#contributing)
 - [License](#license)
 
-<!-- /TOC -->
+
 
 # Overview
 
@@ -65,6 +63,11 @@ This service is meant to simplify running Google Cloud operations, especially Bi
 * Package in a Docker image
 
 This service was originally created to perform "cloud-to-cloud" operations, specifically BigQuery exports and syncing files to Amazon S3. However, you can run any commands supported by the SDK via the container.
+
+# Versioning
+| Docker Tag | Git Hub Release | SDK | Alpine Version |
+|-----|-------|-----|--------|
+| latest | Master |157.0.0 | 3.6 |
 
 # Getting Started
 
@@ -552,12 +555,6 @@ GASESSIONSCHECK=$(bq ls -n 1000 "${GOOGLE_CLOUDSDK_CORE_PROJECT}":"${GOOGLE_BIGQ
 ```
 # TODO
 * Finish data import script (bigquery-import).
-
-# Build Details
-
-The container is based on the following:<br>
-**Operating System:** Alpine `3.6`<br>
-**Google SDK Version:** `Latest`
 
 # Issues
 
