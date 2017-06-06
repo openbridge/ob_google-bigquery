@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-dockerimage="openbridge/google-cloud"
+dockerimage="openbridge/ob_google-bigquery"
 args=("$@")
 
 

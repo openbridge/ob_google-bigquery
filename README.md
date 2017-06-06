@@ -556,7 +556,7 @@ GASESSIONSCHECK=$(bq ls -n 1000 "${GOOGLE_CLOUDSDK_CORE_PROJECT}":"${GOOGLE_BIGQ
 # Build Details
 
 The container is based on the following:<br>
-**Operating System:** Alpine `Edge`<br>
+**Operating System:** Alpine `3.6`<br>
 **Google SDK Version:** `Latest`
 
 # Issues

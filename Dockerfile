@@ -1,4 +1,4 @@
-FROM alpine:edge
+FROM alpine:3.6
 MAINTAINER Thomas Spicer <thomas@openbridge.com>
 
 ENV CLOUDSDK_PYTHON_SITEPACKAGES=1
