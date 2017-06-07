@@ -1,4 +1,4 @@
-![Google](./images/google.png)
+![Google](https://github.com/openbridge/ob_google-bigquery/raw/master/images/google.png)
 
 # Google BigQuery+
 
