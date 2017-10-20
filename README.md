@@ -67,7 +67,7 @@ This service was originally created to perform "cloud-to-cloud" operations, spec
 # Versioning
 | Docker Tag | Git Hub Release | SDK | Alpine Version |
 |-----|-------|-----|--------|
-| latest | Master |latest | 3.6 |
+| latest | Master | 176.0.0 | 3.6 |
 
 # Getting Started
 
