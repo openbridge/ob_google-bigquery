@@ -1,4 +1,4 @@
-FROM alpine:3.6
+FROM alpine:latest
 MAINTAINER Thomas Spicer <thomas@openbridge.com>
 
 ENV CLOUDSDK_PYTHON_SITEPACKAGES=1
@@ -18,19 +18,16 @@ ENV BUILD_DEPS \
         py2-pip \
         gnupg \
         musl-dev
-COPY usr/bin/ /usr/bin/
-COPY lifecycle.json /lifecycle.json
-COPY sql/ /sql/
-COPY docker-entrypoint.sh /docker-entrypoint.sh
 RUN set -x \
     && apk add --no-cache --virtual .persistent-deps \
         rsync \
         bash \
         curl \
+        dateutils \
         ca-certificates \
         libressl \
-        libressl2.5-libcrypto \
-        libressl2.5-libssl \
+        libressl2.6-libcrypto \
+        libressl2.6-libssl \
         coreutils \
         openssh-client \
         python2 \
@@ -42,16 +39,23 @@ RUN set -x \
     && wget --no-check-certificate https://dl.google.com/dl/cloudsdk/channels/rapid/google-cloud-sdk.zip \
     && unzip google-cloud-sdk.zip \
     && rm google-cloud-sdk.zip \
-    && ./google-cloud-sdk/install.sh --usage-reporting=true --path-update=true --bash-completion=true --rc-path=/.bashrc --additional-components app-engine-java app-engine-python app kubectl alpha beta gcd-emulator pubsub-emulator cloud-datastore-emulator bq core gsutil gcloud app-engine-go bigtable \
+    && ./google-cloud-sdk/install.sh --path-update=true --bash-completion=true --rc-path=/.bashrc --additional-components app-engine-java app-engine-python kubectl alpha beta gcd-emulator pubsub-emulator cloud-datastore-emulator bq core gsutil gcloud app-engine-go bigtable \
+    && ln -s /lib /lib64 \
     && rm -rf /tmp/* \
-    && google-cloud-sdk/bin/gcloud config set --installation component_manager/disable_update_check true \
-    && sed -i -- 's/\"disable_updater\": false/\"disable_updater\": true/g' /google-cloud-sdk/lib/googlecloudsdk/core/config.json \
+    && gcloud config set core/disable_usage_reporting true \
+    && gcloud config set component_manager/disable_update_check true \
+    && gcloud config set metrics/environment github_docker_image \
+    && gcloud --version \
     && mkdir /.ssh \
-    && chmod +x /usr/bin/bigquery-run /usr/bin/bigquery-export /usr/bin/bigquery-import /docker-entrypoint.sh \
     && rm -rf /var/cache/apk/* \
     && apk del .build-deps
 
-RUN chmod +x /usr/bin/
+COPY usr/bin/ /usr/bin/
+COPY lifecycle.json /lifecycle.json
+COPY sql/ /sql/
+COPY docker-entrypoint.sh /docker-entrypoint.sh
+
+RUN chmod +x /usr/bin/ /docker-entrypoint.sh
 
 VOLUME ["/.config"]
 

@@ -1,21 +1,15 @@
 #!/usr/bin/env bash
 
-set -e
-set -x
+set -ex
 
 exec 200< $0
-
 if ! flock -n 200; then echo "OK: There can be only one query process happening at once. Exit" && exit 1; fi
 
 args=("$@")
 
-function mode() {
-
-  if [[ ${args[0]} = "prod" ]]; then MODE=prod && export MODE=${1}; else export MODE="test"; fi
-  if [[ -z ${args[1]} ]]; then START=$(date -d "1 day ago" "+%Y-%m-%d"); else START="${args[1]}" && echo "OK: START date passed... "; fi
-  if [[ -z ${args[2]} ]]; then END=$(date -d "1 day ago" "+%Y-%m-%d"); else END="${args[2]}" && echo "OK: END date passed... "; fi
-
-}
+if [[ ${args[1]} = "prod" ]]; then MODE=prod && export MODE=${1}; else export MODE="test"; fi
+if [[ -z ${args[2]} ]]; then START=$(date -d "1 day ago" "+%Y-%m-%d"); else export START="${2}" && echo "OK: START date passed... "; fi
+if [[ -z ${args[3]} ]]; then END=$(date -d "1 day ago" "+%Y-%m-%d"); else export END="${3}" && echo "OK: END date passed... "; fi
 
 function account_auth() {
 
@@ -33,16 +27,26 @@ function export_process_sql() {
 
     echo "OK: Starting to run query ${GOOGLE_BIGQUERY_SQL} ${GOOGLE_CLOUDSDK_CORE_PROJECT} ${GOOGLE_BIGQUERY_JOB_DATASET} ${START} ${END}"
 
-    bash -c "/usr/bin/bigquery-export ${GOOGLE_BIGQUERY_SQL} ${GOOGLE_CLOUDSDK_CORE_PROJECT} ${GOOGLE_BIGQUERY_JOB_DATASET} ${START} ${END} >> /tmp/query.log 2>&1"
+    cur=$(dateseq -i%Y-%m-%d -f%Y-%m-%d "${START}" "${END}")
+    export cur
 
-    if [[ $? = 0 ]]; then echo "OK: ${GOOGLE_BIGQUERY_SQL} query completed"; else echo "ERROR: ${GOOGLE_BIGQUERY_SQL} query did not complete"; fi
+    while read -r line; do
+
+        echo "Working on date $line"
+
+        bash -c "/usr/bin/bigquery-export ${GOOGLE_BIGQUERY_SQL} ${GOOGLE_CLOUDSDK_CORE_PROJECT} ${GOOGLE_BIGQUERY_JOB_DATASET} ${line} ${line} >> /tmp/query.log 2>&1"
+
+        if [[ $? = 0 ]]; then echo "OK: ${GOOGLE_BIGQUERY_SQL} query completed"; else echo "ERROR: ${GOOGLE_BIGQUERY_SQL} query did not complete"; fi
+
+        if [[ $? = 0 ]]; then echo "OK: "; else echo "ERROR: "; fi
+        
+     done <<< "${cur}"
 
     } 200>/tmp/query.lock
 
 }
 
 function run() {
-  mode
   account_auth
   export_process_sql
   echo "OK: All processes have completed."

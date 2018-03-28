@@ -33,7 +33,7 @@ CUR=${START}
     fi
 
     # Check is the passed SQL is present.
-    if [[ -f "/tmp/sql/${GOOGLE_BIGQUERY_SQL}.sql" ]]; then
+    if [[ -f "/sql/${GOOGLE_BIGQUERY_SQL}.sql" ]]; then
         echo "OK: The ${GOOGLE_BIGQUERY_SQL} is present. Ready to run..."
     else
         echo "ERROR: The is no ${GOOGLE_BIGQUERY_SQL} present. Can not run without ${GOOGLE_BIGQUERY_SQL} being present. Please check your configs." && exit 1
@@ -107,7 +107,7 @@ function setup_bq_tables() {
     fi
 
     #Import the query and set the required BQ variables
-    BQQUERY=$(cat /tmp/sql/${GOOGLE_BIGQUERY_SQL}.sql | sed "s/{{QDATE}}/${QDATE}/g; s/{{GOOGLE_BIGQUERY_TABLE}}/${GOOGLE_BIGQUERY_TABLE}/g; s/{{GOOGLE_CLOUDSDK_CORE_PROJECT}}/${GOOGLE_CLOUDSDK_CORE_PROJECT}/g; s/{{GOOGLE_BIGQUERY_JOB_DATASET}}/${GOOGLE_BIGQUERY_JOB_DATASET}/g; s/{{GOOGLE_DOUBLECLICK_NETWORK_CODE}}/${GOOGLE_DOUBLECLICK_NETWORK_CODE}/g; s/{{GOOGLE_DOUBLECLICK_ID}}/${GOOGLE_DOUBLECLICK_ID}/g" )
+    BQQUERY=$(cat /sql/${GOOGLE_BIGQUERY_SQL}.sql | sed "s/{{QDATE}}/${QDATE}/g; s/{{GOOGLE_BIGQUERY_SOURCE_TABLE}}/${GOOGLE_BIGQUERY_SOURCE_TABLE}/g; s/{{GOOGLE_CLOUDSDK_CORE_PROJECT}}/${GOOGLE_CLOUDSDK_CORE_PROJECT}/g; s/{{GOOGLE_BIGQUERY_JOB_DATASET}}/${GOOGLE_BIGQUERY_JOB_DATASET}/g; s/{{GOOGLE_DOUBLECLICK_NETWORK_CODE}}/${GOOGLE_DOUBLECLICK_NETWORK_CODE}/g; s/{{GOOGLE_DOUBLECLICK_ID}}/${GOOGLE_DOUBLECLICK_ID}/g" )
 
 }
 
@@ -115,23 +115,26 @@ function table_check() {
 
 # Check if the table exists. For GA360 we want to use the current date given the delay from Google in delivery may cause it not to be present
 
-if [[ ${GOOGLE_BIGQUERY_TABLE} = *"ga_sessions"* ]]; then
+if [[ ${GOOGLE_BIGQUERY_SOURCE_TABLE} = *"ga_sessions"* ]]; then
     GOOGLE_TABLE_TEST="ga_sessions_${FDATE}"
 else
-    GOOGLE_TABLE_TEST=${GOOGLE_BIGQUERY_TABLE}
+    GOOGLE_TABLE_TEST=${GOOGLE_BIGQUERY_SOURCE_TABLE}
 fi
 
 for i in $(bq ls -n 9999 "${GOOGLE_CLOUDSDK_CORE_PROJECT}":"${GOOGLE_BIGQUERY_JOB_DATASET}" | grep "${GOOGLE_TABLE_TEST}" | awk '{print $1}'); do if test "${i}" = "${GOOGLE_TABLE_TEST}"; then GASESSIONSCHECK="0"; else GASESSIONSCHECK="1"; fi done
 
-    if [[ "${GASESSIONSCHECK}" = "0" ]]; then
-        echo "OK: ${GOOGLE_TABLE_TEST} table exists. Run export process..."
-        bq query --batch --allow_large_results --destination_table="${GOOGLE_BIGQUERY_WD_DATASET}"."${FILEDATE}"_"${GOOGLE_BIGQUERY_SQL}" "${BQQUERY}"
-    else
-        echo "ERROR: The ${GOOGLE_TABLE_TEST} data is not present yet. Cant start export process" && exit 1
-    fi
+
 }
 
 function export_data() {
+
+# We export the data to a temp table. This is used for the data file export
+if [[ "${GASESSIONSCHECK}" = "0" ]]; then
+    echo "OK: ${GOOGLE_TABLE_TEST} table exists. Run export process..."
+    bq query --batch --allow_large_results --destination_table="${GOOGLE_BIGQUERY_WD_DATASET}"."${FILEDATE}"_"${GOOGLE_BIGQUERY_SQL}" "${BQQUERY}"
+else
+    echo "ERROR: The ${GOOGLE_TABLE_TEST} data is not present yet. Cant start export process" && exit 1
+fi
 
 # Check if the process created the daily export table in the working job dataset
 for i in $(bq ls -n 9999 "${GOOGLE_CLOUDSDK_CORE_PROJECT}":"${GOOGLE_BIGQUERY_WD_DATASET}" | grep "${FILEDATE}_${GOOGLE_BIGQUERY_SQL}" | awk '{print $1}'); do if test "${i}" = "${FILEDATE}_${GOOGLE_BIGQUERY_SQL}"; then BQTABLECHECK="0"; else BQTABLECHECK="1"; fi done
@@ -143,7 +146,7 @@ if test "${BQTABLECHECK}" = "0"; then
 
     while read -r num; do echo "${num}" && if [[ $num =~ \"num\":\"([[:digit:]]+)\" ]] && (( BASH_REMATCH[1] > 1000 )); then echo "Ok: ${FILEDATE}_${GOOGLE_BIGQUERY_SQL} table count test meet expectations. Ready to creat extracts..."
 
-        bq extract --compression=GZIP ${GOOGLE_CLOUDSDK_CORE_PROJECT}:${GOOGLE_BIGQUERY_WD_DATASET}.${FILEDATE}_${GOOGLE_BIGQUERY_SQL} gs://${GOOGLE_STORAGE_BUCKET}/${GOOGLE_STORAGE_PATH}/${GOOGLE_BIGQUERY_SQL}/${FILEDATE}_${GOOGLE_BIGQUERY_SQL}_export*.gz; fi done < <(echo "SELECT COUNT(*) as num FROM [${GOOGLE_CLOUDSDK_CORE_PROJECT}:${GOOGLE_BIGQUERY_WD_DATASET}.${FILEDATE}_${GOOGLE_BIGQUERY_SQL}] HAVING COUNT(*) > 100000" | bq query --format json)
+        bq extract --compression=GZIP ${GOOGLE_CLOUDSDK_CORE_PROJECT}:${GOOGLE_BIGQUERY_WD_DATASET}.${FILEDATE}_${GOOGLE_BIGQUERY_SQL} gs://${GOOGLE_STORAGE_BUCKET}/${GOOGLE_STORAGE_PATH}/${GOOGLE_BIGQUERY_SQL}/${DSTART}/${FILEDATE}_${GOOGLE_BIGQUERY_SQL}_export*.gz; fi done < <(echo "SELECT COUNT(*) as num FROM [${GOOGLE_CLOUDSDK_CORE_PROJECT}:${GOOGLE_BIGQUERY_WD_DATASET}.${FILEDATE}_${GOOGLE_BIGQUERY_SQL}] HAVING COUNT(*) > 100000" | bq query --format json)
 
     else
         echo "ERROR: The ${FILEDATE}_${GOOGLE_BIGQUERY_SQL} table counts are too low. Exiting" && exit 1
