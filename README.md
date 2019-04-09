@@ -46,6 +46,7 @@
 
 
 # Overview
+<b>UPDATE: If you wanted an automated solutions for moving Google Analtyics 360 to Amazon Redshift, Amazon Redshift Spectrum or Amazon Athena, learn more here: https://www.openbridge.com/product/openbridge-google-analytics-360</b>
 
 This service is meant to simplify running Google Cloud operations, especially BigQuery tasks. This means you do not have to worry about installation, configuration or ongoing maintenance related to an SDK environment. This can be helpful to those who would prefer to not to be responsible for those activities.
 
